@@ -6,17 +6,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun IpodClickWheelPlaceholder(
-    darkMode: Boolean
+    modifier: Modifier = Modifier
 ) {
-    val bodyColor = if (darkMode) Color(0xFF1C1C1C) else Color(0xFFF2F2F2)
+    val wheelColor = Color(0xFFD6D6D6)
 
     Box(
-        modifier = Modifier
-            .size(200.dp)
-            .background(bodyColor, CircleShape)
+        modifier = modifier
+            .background(wheelColor, CircleShape)
     )
 }

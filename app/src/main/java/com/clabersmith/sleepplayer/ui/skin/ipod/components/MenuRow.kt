@@ -7,9 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodFontFamily
+import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodMenuHighlight
+import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodTextPrimary
 
 @Composable
-fun IpodMenuRow(
+fun MenuRow(
     text: String,
     selected: Boolean
 ) {
@@ -17,13 +21,16 @@ fun IpodMenuRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (selected) Color.Black else Color.Transparent
+                if (selected) IpodMenuHighlight else Color.Transparent
             )
             .padding(vertical = 4.dp)
     ) {
         Text(
             text = text,
-            color = if (selected) Color.White else Color.Black
+            fontFamily = IpodFontFamily,
+            fontSize = 16.sp,
+            color = if (selected) Color.White else IpodTextPrimary
         )
+
     }
 }
