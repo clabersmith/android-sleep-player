@@ -1,9 +1,9 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.viewmodel
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.viewmodel
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.ViewModel
-import com.clabersmith.sleepplayer.ui.skin.ipod.input.WheelEvent
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.input.WheelEvent
 
 class  IpodUiViewModel : ViewModel() {
 

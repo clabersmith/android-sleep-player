@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.components
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

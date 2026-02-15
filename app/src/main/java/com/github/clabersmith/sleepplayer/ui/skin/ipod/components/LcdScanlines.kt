@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.components
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable

@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.input
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.input
 
 sealed class WheelEvent {
     data class Rotate(val delta: Float) : WheelEvent()

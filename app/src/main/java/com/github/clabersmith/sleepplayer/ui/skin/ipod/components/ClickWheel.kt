@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.components
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.components
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,9 +33,9 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
-import com.clabersmith.sleepplayer.ui.skin.ipod.input.WheelEvent
-import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodClickWheelColor
-import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodMenuText
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.input.WheelEvent
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodClickWheelColor
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodMenuText
 import kotlin.math.abs
 import kotlin.math.atan2
 

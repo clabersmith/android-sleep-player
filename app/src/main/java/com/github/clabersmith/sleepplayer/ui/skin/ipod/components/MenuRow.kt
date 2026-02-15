@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.components
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -8,9 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodFontFamily
-import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodMenuHighlight
-import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodTextPrimary
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodFontFamily
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodMenuHighlight
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodTextPrimary
 
 @Composable
 fun MenuRow(

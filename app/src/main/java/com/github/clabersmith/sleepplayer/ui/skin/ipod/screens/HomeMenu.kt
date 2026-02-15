@@ -1,8 +1,8 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.screens
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
-import com.clabersmith.sleepplayer.ui.skin.ipod.components.MenuRow
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.components.MenuRow
 
 @Composable
 fun HomeMenu(

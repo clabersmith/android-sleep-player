@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.screens
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +15,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.clabersmith.sleepplayer.R
-import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodFontFamily
-import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodTextPrimary
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodFontFamily
+import com.github.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodTextPrimary
 
 @Composable
 fun Header(

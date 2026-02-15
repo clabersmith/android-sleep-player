@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer.ui.skin.ipod.theme
+package com.github.clabersmith.sleepplayer.ui.skin.ipod.theme
 
 import androidx.compose.ui.graphics.Color
 
