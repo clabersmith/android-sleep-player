@@ -10,6 +10,7 @@ import kotlin.math.min
 
 @Composable
 fun LcdScreen(
+    selectedIndex: Int,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -32,7 +33,7 @@ fun LcdScreen(
             Column {
                 Header(title = "SleepPod")
                 Spacer(modifier = Modifier.height(8.dp))
-                HomeMenu(selectedIndex = 0)
+                HomeMenu(selectedIndex = selectedIndex)
             }
         }
     }

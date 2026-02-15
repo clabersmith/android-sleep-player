@@ -7,25 +7,42 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.clabersmith.sleepplayer.ui.skin.ipod.components.IpodClickWheelPlaceholder
+import com.clabersmith.sleepplayer.ui.skin.ipod.components.ClickWheel
 import com.clabersmith.sleepplayer.ui.skin.ipod.screens.LcdScreen
+import com.clabersmith.sleepplayer.ui.skin.ipod.viewmodel.IpodUiViewModel
+import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodBodyColorDark
+import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodBodyColorLight
+import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodClickWheelTextColorDark
+import com.clabersmith.sleepplayer.ui.skin.ipod.theme.IpodClickWheelTextColorLight
+
 
 @Composable
-fun IpodScreen() {
+fun IpodScreen(
+        viewModel: IpodUiViewModel
+) {
     val darkMode = isSystemInDarkTheme()
+    val bodyColor = if(darkMode) IpodBodyColorDark else IpodBodyColorLight
+    val wheelTextColor = if (darkMode) IpodClickWheelTextColorDark else
+        IpodClickWheelTextColorLight
+
 
     IpodShell(darkMode = darkMode) {
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(Modifier.height(24.dp))
 
-        LcdScreen()
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        IpodClickWheelPlaceholder(
-            modifier = Modifier.size(190.dp)
+        LcdScreen(
+            selectedIndex = viewModel.selectedIndex.value
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(36.dp))
+
+        ClickWheel(
+            bodyColor = bodyColor,
+            textColor = wheelTextColor,
+            modifier = Modifier.size(280.dp),
+            onEvent = viewModel::onWheelEvent
+        )
+
+        Spacer(Modifier.height(32.dp))
     }
 }
