@@ -6,11 +6,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
-import com.github.clabersmith.sleepplayer.ui.skin.ipod.IpodScreen
-import com.github.clabersmith.sleepplayer.ui.skin.ipod.viewmodel.IpodUiViewModel
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.IpodScreen
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.IpodUiViewModel
 
 class MainActivity : ComponentActivity() {
-    val ipodUiViewModel by viewModels<IpodUiViewModel>()
+    private val ipodUiViewModel: IpodUiViewModel by viewModels {
+        IpodUiViewModelFactory(
+            repository = container.podcastRepository
+        )
+    }
+
+    private val container = AppContainer()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
