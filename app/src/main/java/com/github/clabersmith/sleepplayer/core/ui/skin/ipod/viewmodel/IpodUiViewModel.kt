@@ -1,6 +1,5 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
-import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.ViewModel
@@ -12,6 +11,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for the iPod-style UI.
+ *
+ * Note: any debug logging in this class needs to not use the android.util.Log class
+ * to keep the class easily testable, as Junit test do not run on Android.
+ * Instead, we can use println for simplicity, eg. println("Loaded feeds: ${_feeds.value.size}")
+ */
 class IpodUiViewModel(
     private val podcastRepository: PodcastRepository
 ) : ViewModel() {
@@ -26,7 +32,6 @@ class IpodUiViewModel(
     private fun loadFeeds() {
         viewModelScope.launch {
             _feeds.value = podcastRepository.getFeeds()
-            Log.d("IpodUiViewModel", "Loaded feeds: ${_feeds.value.size}")
         }
     }
 
@@ -51,4 +56,5 @@ class IpodUiViewModel(
             else -> Unit
         }
     }
+
 }

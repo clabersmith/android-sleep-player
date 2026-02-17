@@ -1,4 +1,4 @@
-package com.clabersmith.sleepplayer
+package com.github.clabersmith.sleepplayer
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

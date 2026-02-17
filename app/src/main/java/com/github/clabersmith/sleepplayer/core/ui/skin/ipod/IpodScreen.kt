@@ -9,11 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.components.ClickWheel
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.screens.LcdScreen
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.IpodUiViewModel
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodBodyColorDark
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodBodyColorLight
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodClickWheelTextColorDark
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodClickWheelTextColorLight
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.IpodUiViewModel
 
 
 @Composable
