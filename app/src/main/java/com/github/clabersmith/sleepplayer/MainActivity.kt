@@ -7,11 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.IpodScreen
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.IpodUiViewModel
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuViewModel
 
 class MainActivity : ComponentActivity() {
-    private val ipodUiViewModel: IpodUiViewModel by viewModels {
-        IpodUiViewModelFactory(
+    private val menuViewModel: MenuViewModel by viewModels {
+        ViewModelFactory(
             repository = container.podcastRepository
         )
     }
@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 IpodScreen(
-                    viewModel = ipodUiViewModel
+                    viewModel = menuViewModel
                 )
             }
         }

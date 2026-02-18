@@ -1,4 +1,4 @@
-package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.screens
+package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

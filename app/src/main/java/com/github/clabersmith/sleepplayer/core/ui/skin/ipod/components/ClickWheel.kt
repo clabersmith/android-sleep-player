@@ -33,7 +33,6 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.input.WheelEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodClickWheelColor
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import kotlin.math.abs
@@ -43,16 +42,16 @@ import kotlin.math.atan2
 fun ClickWheel(
     bodyColor: Color,
     textColor: Color,
-    onEvent: (WheelEvent) -> Unit,
+    onRotate: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
     BoxWithConstraints(modifier = modifier) {
 
-        // ----- Baseline design -----
         val baseSize = 240.dp
 
-        // Scale to available space like IpodLcdScreen
         val scale = (minOf(maxWidth, maxHeight) / baseSize)
             .coerceAtMost(1.2f)
 
@@ -74,7 +73,7 @@ fun ClickWheel(
                     clip = true
                 }
                 .clip(CircleShape)
-                .background(IpodClickWheelColor) // wheel surface
+                .background(IpodClickWheelColor)
                 .border(
                     width = 1.dp,
                     color = Color.Black.copy(alpha = 0.15f),
@@ -82,65 +81,15 @@ fun ClickWheel(
                 )
                 .pointerInput(Unit) {
                     detectCircularGestures(
-                        onRotate = { delta ->
-                            onEvent(WheelEvent.Rotate(delta))
-                        },
-                        onGestureEnd = {
-                            onEvent(WheelEvent.GestureEnd)
+                        onRotateStep = { step ->
+                            onRotate(step)
                         }
                     )
                 },
             contentAlignment = Alignment.Center
         ) {
 
-            // ----- Subtle inner rim shadow -----
-            Box(
-                modifier = Modifier
-                    .size(rimOuter)
-                    .clip(CircleShape)
-                    .border(
-                        width = 2.dp,
-                        color = Color.Black.copy(alpha = 0.06f),
-                        shape = CircleShape
-                    )
-            )
-
-            // ----- Subtle inner rim highlight -----
-            Box(
-                modifier = Modifier
-                    .size(rimInner)
-                    .clip(CircleShape)
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.20f),
-                        shape = CircleShape
-                    )
-            )
-
-            // ----- Inner rings -----
-            Box(
-                modifier = Modifier
-                    .size(innerRing1)
-                    .clip(CircleShape)
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.35f),
-                        shape = CircleShape
-                    )
-            )
-
-            Box(
-                modifier = Modifier
-                    .size(innerRing2)
-                    .clip(CircleShape)
-                    .border(
-                        width = 1.dp,
-                        color = Color.Black.copy(alpha = 0.15f),
-                        shape = CircleShape
-                    )
-            )
-
-            // ----- MENU label -----
+            // ----- MENU (Back) -----
             Text(
                 text = "MENU",
                 color = textColor,
@@ -153,10 +102,10 @@ fun ClickWheel(
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }
-                    )  { onEvent(WheelEvent.MenuClick) }
+                    ) { onBack() }
             )
 
-            // ----- PREVIOUS (LEFT) -----
+            // ----- PREVIOUS -----
             Text(
                 text = "⏮",
                 color = textColor,
@@ -166,15 +115,9 @@ fun ClickWheel(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 20.dp * scale)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    )  {
-                        onEvent(WheelEvent.PrevClick)
-                    }
             )
 
-            // ----- NEXT (RIGHT) -----
+            // ----- NEXT -----
             Text(
                 text = "⏭",
                 color = textColor,
@@ -184,32 +127,19 @@ fun ClickWheel(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 20.dp * scale)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    )  {
-                        onEvent(WheelEvent.NextClick)
-                    }
             )
 
-            // ----- PLAY / PAUSE (BOTTOM) -----
+            // ----- PLAY/PAUSE (visual only for now) -----
             Canvas(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 18.dp * scale)
-                    .size(28.dp * .8f *  scale)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        onEvent(WheelEvent.PlayPauseClick)
-                    }
+                    .size(28.dp * .8f * scale)
             ) {
                 val w = size.width
                 val h = size.height
                 val color = textColor
 
-                // triangle (same as before)
                 drawPath(
                     path = Path().apply {
                         moveTo(w * 0.18f, h * 0.22f)
@@ -220,12 +150,10 @@ fun ClickWheel(
                     color = color
                 )
 
-                // pause bars with ~1:1.25 bar:gap ratio
                 val barWidth = w * 0.11f
                 val gap = barWidth * 1.25f
-
                 val firstX = w * 0.64f
-                val secondX = firstX + barWidth + gap   // → enforces 1:1.3 spacing
+                val secondX = firstX + barWidth + gap
 
                 drawRect(
                     color = color,
@@ -240,25 +168,24 @@ fun ClickWheel(
                 )
             }
 
-
             // ----- CENTER BUTTON -----
             var isPressed by remember { mutableStateOf(false) }
 
             val buttonScale by animateFloatAsState(
                 targetValue = if (isPressed) 0.975f else 1f,
-                animationSpec = tween(durationMillis = 90),
+                animationSpec = tween(90),
                 label = "centerScale"
             )
 
             val shadow by animateDpAsState(
                 targetValue = if (isPressed) 1.4.dp else 3.dp,
-                animationSpec = tween(durationMillis = 90),
+                animationSpec = tween(90),
                 label = "centerShadow"
             )
 
             val overlayAlpha by animateFloatAsState(
                 targetValue = if (isPressed) 0.06f else 0f,
-                animationSpec = tween(durationMillis = 90),
+                animationSpec = tween(90),
                 label = "centerOverlay"
             )
 
@@ -284,7 +211,7 @@ fun ClickWheel(
                                 isPressed = true
                                 try {
                                     awaitRelease()
-                                    onEvent(WheelEvent.CenterClick)
+                                    onConfirm()
                                 } finally {
                                     isPressed = false
                                 }
@@ -292,38 +219,33 @@ fun ClickWheel(
                         )
                     }
             ) {
-                // Subtle dark overlay when pressed
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(
-                            Color.Black.copy(alpha = overlayAlpha)
-                        )
+                        .background(Color.Black.copy(alpha = overlayAlpha))
                 )
             }
         }
     }
 }
+
 suspend fun PointerInputScope.detectCircularGestures(
-    onRotate: (Float) -> Unit,
-    onGestureEnd: () -> Unit
+    onRotateStep: (Int) -> Unit
 ) {
     var previousAngle: Float? = null
     var accumulator = 0f
 
-    val NOTCH_THRESHOLD = 0.22f   // ~12.6° per step
-    val SENSITIVITY = 0.18f       // heavier feel
+    val NOTCH_THRESHOLD = 0.22f
+    val SENSITIVITY = 0.18f
 
     detectDragGestures(
         onDragEnd = {
             previousAngle = null
             accumulator = 0f
-            onGestureEnd()
         },
         onDragCancel = {
             previousAngle = null
             accumulator = 0f
-            onGestureEnd()
         }
     ) { change, _ ->
 
@@ -347,16 +269,15 @@ suspend fun PointerInputScope.detectCircularGestures(
                 val dampedDelta = delta.coerceIn(-0.4f, 0.4f)
                 accumulator += dampedDelta * SENSITIVITY
 
-                // Only fire when enough movement collected
                 while (abs(accumulator) >= NOTCH_THRESHOLD) {
 
-                    val step =
-                        if (accumulator > 0) NOTCH_THRESHOLD
-                        else -NOTCH_THRESHOLD
+                    val direction =
+                        if (accumulator > 0) 1 else -1
 
-                    onRotate(step)
+                    onRotateStep(direction)
 
-                    accumulator -= step
+                    accumulator -=
+                        NOTCH_THRESHOLD * direction
                 }
             }
         }
