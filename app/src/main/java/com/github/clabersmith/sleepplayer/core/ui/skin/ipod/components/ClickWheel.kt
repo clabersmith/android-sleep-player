@@ -56,11 +56,6 @@ fun ClickWheel(
             .coerceAtMost(1.2f)
 
         val wheelSize = baseSize * scale
-        val rimOuter = 240.dp * scale
-        val rimInner = 236.dp * scale
-
-        val innerRing1 = 83.dp * scale
-        val innerRing2 = 82.dp * scale
 
         val centerSize = 80.dp * scale
 
@@ -253,7 +248,7 @@ suspend fun PointerInputScope.detectCircularGestures(
         val touch = change.position
 
         val angle = atan2(
-            center.y - touch.y,
+            touch.y - center.y,
             touch.x - center.x
         )
 
