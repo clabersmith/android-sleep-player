@@ -5,7 +5,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.clabersmith.sleepplayer.R
+import com.github.clabersmith.sleepplayer.R
 
 val IpodFontFamily = FontFamily(
     Font(R.font.chicago, FontWeight.Normal)

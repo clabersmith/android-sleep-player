@@ -1,5 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod
 
+import android.media.SoundPool
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -7,8 +8,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.github.clabersmith.sleepplayer.R
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.components.ClickWheel
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.LcdScreen
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodBodyColorDark
@@ -34,6 +38,29 @@ fun IpodScreen(
     val menuState by viewModel.menuState.collectAsState()
     val config by viewModel.menuConfig.collectAsState()
 
+    val context = LocalContext.current
+
+    val soundPool = remember {
+        SoundPool.Builder()
+            .setMaxStreams(4)
+            .build()
+    }
+
+    val clickSoundId = remember {
+        soundPool.load(context, R.raw.ipod_click, 1)
+    }
+
+    fun playClick() {
+        soundPool.play(
+            clickSoundId,
+            1f, // left volume
+            1f, // right volume
+            0,  // priority
+            0,  // loop
+            1f  // playback rate
+        )
+    }
+
     IpodShell(darkMode = darkMode) {
 
         Spacer(Modifier.height(24.dp))
@@ -52,10 +79,12 @@ fun IpodScreen(
 
             onRotate = { delta ->
                 viewModel.moveSelection(delta)
+                playClick()
             },
 
             onConfirm = {
                 viewModel.confirmSelection()
+                playClick()
             },
 
             onBack = {
@@ -66,3 +95,4 @@ fun IpodScreen(
         Spacer(Modifier.height(32.dp))
     }
 }
+

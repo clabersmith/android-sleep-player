@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.clabersmith.sleepplayer"
+    namespace = "com.github.clabersmith.sleepplayer"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.clabersmith.sleepplayer"
+        applicationId = "com.github.clabersmith.sleepplayer"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
