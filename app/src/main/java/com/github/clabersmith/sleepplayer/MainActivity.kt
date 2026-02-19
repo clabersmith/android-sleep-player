@@ -10,13 +10,13 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.IpodScreen
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuViewModel
 
 class MainActivity : ComponentActivity() {
-    private val menuViewModel: MenuViewModel by viewModels {
-        ViewModelFactory(
-            repository = container.podcastRepository
-        )
-    }
 
-    private val container = AppContainer()
+    private val appContainer by lazy {
+        AppContainer(applicationContext)
+    }
+    private val menuViewModel: MenuViewModel by viewModels {
+        ViewModelFactory(appContainer)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -19,6 +19,9 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 fun EpisodeDetailMenu(
     config: MenuConfig
 ) {
+    val downloadRowIndex = 4
+    val backRowIndex = 5
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -27,15 +30,22 @@ fun EpisodeDetailMenu(
 
         config.items.forEachIndexed { index, item ->
 
-            val isBackRow = index == config.items.lastIndex
-            val isSelected = isBackRow && index == config.selectedIndex
+            val isActionRow = index == downloadRowIndex || index == backRowIndex
+
+            val mappedSelectedIndex = when (config.selectedIndex) {
+                0 -> downloadRowIndex
+                1 -> backRowIndex
+                else -> -1
+            }
+
+            val isSelected = index == mappedSelectedIndex
 
             when {
                 item.isBlank() -> {
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                isBackRow -> {
+                isActionRow -> {
                     MenuRow(
                         text = item,
                         selected = isSelected
@@ -43,7 +53,6 @@ fun EpisodeDetailMenu(
                 }
 
                 else -> {
-                    // Title + description rows
                     EpisodeDetailTextRow(
                         text = item,
                         isTitle = index == 0

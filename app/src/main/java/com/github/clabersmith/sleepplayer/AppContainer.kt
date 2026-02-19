@@ -1,11 +1,14 @@
 package com.github.clabersmith.sleepplayer
 
+import android.content.Context
+import com.github.clabersmith.sleepplayer.core.data.datastore.slotDataStore
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.remote.HttpClientProvider
 import com.github.clabersmith.sleepplayer.features.podcasts.data.remote.HttpPodcastDataSource
 import com.github.clabersmith.sleepplayer.features.podcasts.data.repository.DefaultPodcastRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 
-class AppContainer {
+class AppContainer(context: Context) {
 
     private val httpClient = HttpClientProvider.client
 
@@ -16,4 +19,6 @@ class AppContainer {
 
     val podcastRepository: PodcastRepository =
         DefaultPodcastRepository(dataSource)
+
+    val persistedSlotRepository = PersistedSlotRepository(context.slotDataStore)
 }
