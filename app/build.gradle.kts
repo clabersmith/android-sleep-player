@@ -32,6 +32,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    testOptions {
+        unitTests.all {
+            it.testLogging.showStandardStreams = true
+        }
+    }
     kotlinOptions {
         jvmTarget = "11"
     }

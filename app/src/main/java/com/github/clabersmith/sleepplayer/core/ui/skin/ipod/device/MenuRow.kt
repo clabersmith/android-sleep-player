@@ -1,7 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device
 
-import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.basicMarquee
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuHighlight
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary

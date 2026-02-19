@@ -1,4 +1,4 @@
-package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.components
+package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState

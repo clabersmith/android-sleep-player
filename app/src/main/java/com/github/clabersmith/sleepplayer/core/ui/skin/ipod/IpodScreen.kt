@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -13,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.R
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.components.ClickWheel
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.ClickWheel
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.LcdScreen
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodBodyColorDark
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodBodyColorLight
@@ -48,6 +49,12 @@ fun IpodScreen(
 
     val clickSoundId = remember {
         soundPool.load(context, R.raw.ipod_click, 1)
+    }
+
+    DisposableEffect(soundPool) {
+        onDispose {
+            soundPool.release()
+        }
     }
 
     fun playClick() {

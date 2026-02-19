@@ -1,7 +1,5 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu
 
-import android.util.Log
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
