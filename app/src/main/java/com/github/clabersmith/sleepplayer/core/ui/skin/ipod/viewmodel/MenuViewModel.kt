@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuConfig
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlotRepository
@@ -20,10 +21,6 @@ class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val persistedSlotRepository: PersistedSlotRepository
 ) : ViewModel() {
-
-    companion object {
-        private val CLEAR_SLOTS_ON_LAUNCH = false
-    }
 
     private val _menuState = MutableStateFlow<MenuState>(MenuState.Home())
     val menuState: StateFlow<MenuState> = _menuState
@@ -126,16 +123,16 @@ class MenuViewModel(
                 }
 
                 is MenuState.EpisodeDetail -> {
+
                     val feed = feeds[state.feedIndex]
                     val episode = feed.episodes[state.episodeIndex]
+
                     val items = listOf(
                         episode.title,
                         "",
                         episode.description.take(120),
-                        "",
-                        "Download",
-                        "Back"
-                    )
+                        ""
+                    ) + state.actionRows.map { it.label }
 
                     MenuConfig(
                         items = items,
@@ -210,7 +207,14 @@ class MenuViewModel(
                     }
 
                     else -> {
-                        // Later: open episode list for that slot
+                        // Selecting a downloaded episode slot
+                        val slot = _slots.value[state.selectedIndex]
+
+                        _menuState.value = buildEpisodeDetailState(
+                            feedIndex = slot.feedIndex,
+                            episodeIndex = slot.episodeIndex,
+                            selectedFromSlot = true // indicates DELETE mode if selected from Downloaded menu
+                        )
                     }
                 }
             }
@@ -250,38 +254,55 @@ class MenuViewModel(
                 if (state.selectedIndex == feed.episodes.size) {
                     _menuState.value = MenuState.Feeds()
                 } else {
-                    _menuState.value = MenuState.EpisodeDetail(
+                    _menuState.value = buildEpisodeDetailState(
                         feedIndex = state.feedIndex,
-                        episodeIndex = state.selectedIndex
+                        episodeIndex = state.selectedIndex,
+                        selectedFromSlot = false
                     )
                 }
             }
 
             is MenuState.EpisodeDetail -> {
 
+                val selectedAction =
+                    state.actionRows
+                        .filter { it.enabled }
+                        .getOrNull(state.selectedIndex)
+                        ?: return
+
                 val feed = feeds[state.feedIndex]
                 val episode = feed.episodes[state.episodeIndex]
 
-                when (state.selectedIndex) {
+                when (selectedAction.type) {
 
-                    0 -> { //Download or Delete action
-                        if (_slots.value.size < MAX_SLOT_SIZE) {
+                    ActionRow.Type.DOWNLOAD -> {
 
-                            val newSlot = SlotState(
-                                feedIndex = state.feedIndex,
-                                episodeIndex = state.episodeIndex,
-                                loadedEpisode = episode,
-                                fileName = ""
-                            )
+                        val newSlot = SlotState(
+                            feedIndex = state.feedIndex,
+                            episodeIndex = state.episodeIndex,
+                            loadedEpisode = episode,
+                            fileName = ""
+                        )
 
-                            _slots.value = _slots.value + newSlot
-                            persistSlots()
-                        }
+                        _slots.value = _slots.value + newSlot
+                        persistSlots()
 
                         _menuState.value = MenuState.Downloaded()
                     }
 
-                    1 -> { //Back action
+                    ActionRow.Type.DELETE -> {
+
+                        _slots.value = _slots.value.filterNot {
+                            it.feedIndex == state.feedIndex &&
+                                    it.episodeIndex == state.episodeIndex
+                        }
+
+                        persistSlots()
+
+                        _menuState.value = MenuState.Downloaded()
+                    }
+
+                    ActionRow.Type.BACK -> {
                         _menuState.value =
                             MenuState.Episodes(feedIndex = state.feedIndex)
                     }
@@ -309,6 +330,50 @@ class MenuViewModel(
         }
     }
 
+    private fun buildEpisodeDetailState(
+        feedIndex: Int,
+        episodeIndex: Int,
+        selectedFromSlot: Boolean
+    ): MenuState.EpisodeDetail {
+
+        val alreadyDownloaded = _slots.value.any {
+            it.feedIndex == feedIndex &&
+                    it.episodeIndex == episodeIndex
+        }
+
+        val primaryAction = when {
+            selectedFromSlot -> ActionRow(
+                label = "Delete",
+                type = ActionRow.Type.DELETE,
+                enabled = true
+            )
+
+            alreadyDownloaded -> ActionRow(
+                label = "Already Downloaded",
+                type = ActionRow.Type.DOWNLOAD,
+                enabled = false
+            )
+
+            else -> ActionRow(
+                label = "Download",
+                type = ActionRow.Type.DOWNLOAD,
+                enabled = true
+            )
+        }
+
+        val backAction = ActionRow(
+            label = "Back",
+            type = ActionRow.Type.BACK,
+            enabled = true
+        )
+
+        return MenuState.EpisodeDetail(
+            feedIndex = feedIndex,
+            episodeIndex = episodeIndex,
+            actionRows = listOf(primaryAction, backAction),
+            selectedIndex = 0
+        )
+    }
     // -----------------------------
     // Helpers
     // -----------------------------
@@ -357,13 +422,7 @@ class MenuViewModel(
             }
 
             is MenuState.EpisodeDetail -> {
-                2
-                // title
-                // blank
-                // truncated description
-                // blank
-                // Download/Delete (actionable)
-                // Back (actionable)
+                state.actionRows.count {it.enabled} // count only enabled action rows
             }
         }
     }
@@ -378,12 +437,6 @@ class MenuViewModel(
 
     private fun restoreSlots() {
         viewModelScope.launch {
-            if (CLEAR_SLOTS_ON_LAUNCH) {
-                persistedSlotRepository.saveSlots(emptyList())
-                _slots.value = emptyList()
-                return@launch
-            }
-
             val persisted = persistedSlotRepository.loadSlots()
 
             _slots.value = persisted.mapNotNull { p ->

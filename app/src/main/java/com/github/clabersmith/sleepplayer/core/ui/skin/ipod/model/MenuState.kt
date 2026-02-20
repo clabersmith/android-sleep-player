@@ -33,6 +33,8 @@ sealed class MenuState(
     data class EpisodeDetail(
         val feedIndex: Int,
         val episodeIndex: Int,
-        override val selectedIndex: Int = 1 // Default to "Back"
-    ) : MenuState()
+        val actionRows: List<ActionRow> = emptyList(), // new
+        override val selectedIndex: Int = 0
+    ) : MenuState(selectedIndex)
 }
+

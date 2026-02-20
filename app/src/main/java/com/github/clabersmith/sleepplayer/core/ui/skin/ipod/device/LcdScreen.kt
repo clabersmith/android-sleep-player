@@ -60,7 +60,12 @@ fun LcdScreen(
                     is MenuState.Categories -> CategoryMenu(config)
                     is MenuState.Feeds -> FeedMenu(config)
                     is MenuState.Episodes -> EpisodeMenu(config)
-                    is MenuState.EpisodeDetail -> EpisodeDetailMenu(config)
+                    is MenuState.EpisodeDetail -> {
+                        EpisodeDetailMenu(
+                            config = config,
+                            actionRows = menuState.actionRows
+                        )
+                    }
                 }
             }
         }

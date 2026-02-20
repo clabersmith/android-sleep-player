@@ -12,15 +12,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.MenuRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuConfig
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 
 @Composable
 fun EpisodeDetailMenu(
-    config: MenuConfig
+    config: MenuConfig,
+    actionRows: List<ActionRow>
 ) {
-    val downloadRowIndex = 4
-    val backRowIndex = 5
+    val actionStartIndex = 4
+    val enabledActions = actionRows.filter { it.enabled }
 
     Column(
         modifier = Modifier
@@ -30,33 +32,37 @@ fun EpisodeDetailMenu(
 
         config.items.forEachIndexed { index, item ->
 
-            val isActionRow = index == downloadRowIndex || index == backRowIndex
-
-            val mappedSelectedIndex = when (config.selectedIndex) {
-                0 -> downloadRowIndex
-                1 -> backRowIndex
-                else -> -1
-            }
-
-            val isSelected = index == mappedSelectedIndex
-
             when {
+
                 item.isBlank() -> {
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                isActionRow -> {
-                    MenuRow(
-                        text = item,
-                        selected = isSelected
-                    )
-                }
-
-                else -> {
+                index < actionStartIndex -> {
                     EpisodeDetailTextRow(
                         text = item,
                         isTitle = index == 0
                     )
+                }
+
+                else -> {
+                    val actionIndex = index - actionStartIndex
+                    val actionRow = actionRows.getOrNull(actionIndex)
+
+                    val selectedAction =
+                        enabledActions.getOrNull(config.selectedIndex)
+
+                    val isSelected =
+                        actionRow != null &&
+                                actionRow.enabled &&
+                                actionRow == selectedAction
+
+                    if (actionRow != null) {
+                        MenuRow(
+                            text = actionRow.label,
+                            selected = isSelected
+                        )
+                    }
                 }
             }
 
