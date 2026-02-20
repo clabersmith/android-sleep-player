@@ -7,7 +7,6 @@ data class ActionRow(
 ) {
     enum class Type {
         DOWNLOAD,
-        DELETE,
-        BACK
+        DELETE
     }
 }

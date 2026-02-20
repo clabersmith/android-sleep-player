@@ -19,8 +19,6 @@ fun DownloadMenu(
         if (hasAddNew) {
             add("Add New")
         }
-
-        add("Back")
     }
 
     MenuList(

@@ -3,6 +3,9 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.DOWNLOAD
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.EPISODES
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
@@ -14,6 +17,7 @@ import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.Podcast
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
 
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
@@ -54,20 +58,18 @@ class MenuViewModel(
 
             is MenuState.Downloaded -> {
                 val total =
-                    state.slots.size +
-                            (if (state.slots.size < state.maxSlots) 1 else 0) +
-                            1
+                    state.slots.size + (if (state.slots.size < state.maxSlots) 1 else 0)
                 state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, total))
             }
 
             is MenuState.Categories ->
-                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.categories.size + 1))
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.categories.size))
 
             is MenuState.Feeds ->
-                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.feeds.size + 1))
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.feeds.size))
 
             is MenuState.Episodes ->
-                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.episodes.size + 1))
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.episodes.size))
 
             is MenuState.EpisodeDetail -> {
                 val count = state.actionRows.count { it.enabled }
@@ -82,7 +84,6 @@ class MenuViewModel(
     // -----------------------------
     fun confirmSelection() {
         val state = _menuState.value
-        val feeds = _feeds.value
 
         when (state) {
 
@@ -99,13 +100,10 @@ class MenuViewModel(
                 val slotCount = state.slots.size
                 val hasAddNew = slotCount < state.maxSlots
                 val addNewIndex = slotCount
-                val backIndex = slotCount + if (hasAddNew) 1 else 0
 
                 when (state.selectedIndex) {
 
                     addNewIndex.takeIf { hasAddNew } -> goCategories()
-
-                    backIndex -> goHome()
 
                     else -> {
                         val slot = state.slots[state.selectedIndex]
@@ -113,46 +111,32 @@ class MenuViewModel(
                             feedIndex = slot.feedIndex,
                             episodeIndex = slot.episodeIndex,
                             episode = slot.loadedEpisode,
-                            selectedFromSlot = true
+                            origin = DOWNLOAD
                         )
                     }
                 }
             }
 
             is MenuState.Categories -> {
-                if (state.selectedIndex == state.categories.size) {
-                    goHome()
-                } else {
-                    val category = state.categories[state.selectedIndex]
-                    goFeeds(category)
-                }
+                val category = state.categories[state.selectedIndex]
+                goFeeds(category)
             }
 
             is MenuState.Feeds -> {
-
-                if (state.selectedIndex == state.feeds.size) {
-                    goCategories()
-                } else {
-                    val selectedFeed = state.feeds[state.selectedIndex]
-                    val feedIndex = _feeds.value.indexOf(selectedFeed)
-                    goEpisodes(feedIndex, state.categoryName)
-                }
+                val selectedFeed = state.feeds[state.selectedIndex]
+                val feedIndex = _feeds.value.indexOf(selectedFeed)
+                goEpisodes(feedIndex, state.categoryName)
             }
 
             is MenuState.Episodes -> {
+                val episode = state.episodes[state.selectedIndex]
 
-                if (state.selectedIndex == state.episodes.size) {
-                    goFeeds(state.categoryName)
-                } else {
-                    val episode = state.episodes[state.selectedIndex]
-
-                    _menuState.value = buildEpisodeDetailState(
-                        feedIndex = state.feedIndex,
-                        episodeIndex = state.selectedIndex,
-                        episode = episode,
-                        selectedFromSlot = false
-                    )
-                }
+                _menuState.value = buildEpisodeDetailState(
+                    feedIndex = state.feedIndex,
+                    episodeIndex = state.selectedIndex,
+                    episode = episode,
+                    origin = EPISODES
+                )
             }
 
             is MenuState.EpisodeDetail -> {
@@ -177,10 +161,6 @@ class MenuViewModel(
                         removeSlot(state.feedIndex, state.episodeIndex)
                         goDownloaded()
                     }
-
-                    ActionRow.Type.BACK -> {
-                        goEpisodes(state.feedIndex, feed.category)
-                    }
                 }
             }
         }
@@ -189,8 +169,15 @@ class MenuViewModel(
     // -----------------------------
     // MENU BUTTON (CLICK WHEEL BACK)
     // -----------------------------
-    fun onBack() {
-        _menuState.value = when (val state = _menuState.value) {
+    fun onMenuShortPress() {
+        _menuState.value = goUp()
+    }
+
+    fun onMenuLongPress() {
+        _menuState.value = MenuState.Home()
+    }
+    fun goUp(): MenuState {
+        return when (val state = _menuState.value) {
 
             is MenuState.Home -> state
 
@@ -208,12 +195,24 @@ class MenuViewModel(
                     feeds = filteredFeeds(state.categoryName)
                 )
 
-            is MenuState.EpisodeDetail ->
-                MenuState.Episodes(
-                    feedIndex = state.feedIndex,
-                    episodes = _feeds.value[state.feedIndex].episodes,
-                    categoryName = _feeds.value[state.feedIndex].category
-                )
+            is MenuState.EpisodeDetail -> {
+
+                when (state.origin) {
+
+                    DOWNLOAD ->
+                        MenuState.Downloaded(
+                            slots = _slots.value,
+                            maxSlots = MAX_SLOT_SIZE
+                        )
+
+                    EPISODES ->
+                        MenuState.Episodes(
+                            feedIndex = state.feedIndex,
+                            episodes = _feeds.value[state.feedIndex].episodes,
+                            categoryName = _feeds.value[state.feedIndex].category
+                        )
+                }
+            }
         }
     }
 
@@ -221,7 +220,7 @@ class MenuViewModel(
         feedIndex: Int,
         episodeIndex: Int,
         episode: PodcastEpisode,
-        selectedFromSlot: Boolean
+        origin: Origin
     ): MenuState.EpisodeDetail {
 
         val alreadyDownloaded = _slots.value.any {
@@ -230,17 +229,18 @@ class MenuViewModel(
         }
 
         val primaryAction = when {
-            selectedFromSlot -> ActionRow(
+            origin == DOWNLOAD -> ActionRow(
                 label = "Delete",
                 type = ActionRow.Type.DELETE,
                 enabled = true
             )
 
-            alreadyDownloaded -> ActionRow(
-                label = "Already Downloaded",
-                type = ActionRow.Type.DOWNLOAD,
-                enabled = false
-            )
+            origin == EPISODES &&
+                alreadyDownloaded -> ActionRow(
+                    label = "Already Downloaded",
+                    type = ActionRow.Type.DOWNLOAD,
+                    enabled = false
+                )
 
             else -> ActionRow(
                 label = "Download",
@@ -249,18 +249,12 @@ class MenuViewModel(
             )
         }
 
-        val backAction = ActionRow(
-            label = "Back",
-            type = ActionRow.Type.BACK,
-            enabled = true
-        )
-
         return MenuState.EpisodeDetail(
             feedIndex = feedIndex,
             episodeIndex = episodeIndex,
             episode = episode,
-            actionRows = listOf(primaryAction, backAction),
-            selectedIndex = 0
+            actionRows = listOf(primaryAction),
+            origin = origin
         )
     }
     // -----------------------------
@@ -285,10 +279,6 @@ class MenuViewModel(
     private fun nextIndex(current: Int, delta: Int, size: Int): Int {
         if (size <= 0) return current
         return (current + delta + size) % size
-    }
-
-    private fun goHome() {
-        _menuState.value = MenuState.Home()
     }
 
     private fun goDownloaded() {

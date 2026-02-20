@@ -92,9 +92,15 @@ fun IpodScreen(
                 playClick()
             },
 
-            onBack = {
-                viewModel.onBack()
-            }
+            onMenuLongPress = {
+                viewModel.onMenuLongPress()
+                playClick()
+            },
+
+            onMenuShortPress = {
+                viewModel.onMenuShortPress()
+                playClick()
+             }
         )
 
         Spacer(Modifier.height(32.dp))

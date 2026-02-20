@@ -7,7 +7,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 fun EpisodeMenu(
     state: MenuState.Episodes
 ) {
-    val items = state.episodes.map { it.title } + "Back"
+    val items = state.episodes.map { it.title }
 
     MenuList(
         items = items,

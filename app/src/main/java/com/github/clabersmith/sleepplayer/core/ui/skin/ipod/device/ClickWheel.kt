@@ -6,10 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.padding
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodClickWheelColor
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.atan2
 
@@ -44,7 +43,8 @@ fun ClickWheel(
     textColor: Color,
     onRotate: (Int) -> Unit,
     onConfirm: () -> Unit,
-    onBack: () -> Unit,
+    onMenuShortPress: () -> Unit,
+    onMenuLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -94,10 +94,21 @@ fun ClickWheel(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 18.dp * scale)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { onBack() }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                val longPressTriggered = withTimeoutOrNull(2000) {
+                                    awaitRelease()
+                                } == null
+
+                                if (longPressTriggered) {
+                                    onMenuLongPress()
+                                } else {
+                                    onMenuShortPress()
+                                }
+                            }
+                        )
+                    }
             )
 
             // ----- PREVIOUS -----
