@@ -12,11 +12,9 @@ import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.Po
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.DownloadConstants.MAX_SLOT_SIZE
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val persistedSlotRepository: PersistedSlotRepository
@@ -48,115 +46,40 @@ class MenuViewModel(
     // -----------------------------
     // Click Wheel Movement
     // -----------------------------
-
     fun moveSelection(delta: Int) {
-        val state = _menuState.value
+        _menuState.value = when (val state = _menuState.value) {
 
-        _menuState.value = when (state) {
+            is MenuState.Home ->
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, 4))
 
-            // -------------------------
-            // Home
-            // -------------------------
-            is MenuState.Home -> {
-                val itemCount = 4
-
-                val next =
-                    (state.selectedIndex + delta + itemCount) % itemCount
-
-                state.copy(selectedIndex = next)
-            }
-
-            // -------------------------
-            // Downloaded
-            // -------------------------
             is MenuState.Downloaded -> {
-
-                val slotCount = state.slots.size
-                val hasAddNew = slotCount < state.maxSlots
-
-                val totalItems =
-                    slotCount +
-                            (if (hasAddNew) 1 else 0) +
-                            1 // Back
-
-                if (totalItems == 0) return
-
-                val next =
-                    (state.selectedIndex + delta + totalItems) %
-                            totalItems
-
-                state.copy(selectedIndex = next)
+                val total =
+                    state.slots.size +
+                            (if (state.slots.size < state.maxSlots) 1 else 0) +
+                            1
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, total))
             }
 
-            // -------------------------
-            // Categories
-            // -------------------------
-            is MenuState.Categories -> {
+            is MenuState.Categories ->
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.categories.size + 1))
 
-                val totalItems =
-                    state.categories.size + 1 // Back
+            is MenuState.Feeds ->
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.feeds.size + 1))
 
-                val next =
-                    (state.selectedIndex + delta + totalItems) %
-                            totalItems
+            is MenuState.Episodes ->
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.episodes.size + 1))
 
-                state.copy(selectedIndex = next)
-            }
-
-            // -------------------------
-            // Feeds
-            // -------------------------
-            is MenuState.Feeds -> {
-
-                val totalItems =
-                    state.feeds.size + 1 // Back
-
-                val next =
-                    (state.selectedIndex + delta + totalItems) %
-                            totalItems
-
-                state.copy(selectedIndex = next)
-            }
-
-            // -------------------------
-            // Episodes
-            // -------------------------
-            is MenuState.Episodes -> {
-
-                val totalItems =
-                    state.episodes.size + 1 // Back
-
-                val next =
-                    (state.selectedIndex + delta + totalItems) %
-                            totalItems
-
-                state.copy(selectedIndex = next)
-            }
-
-            // -------------------------
-            // Episode Detail
-            // -------------------------
             is MenuState.EpisodeDetail -> {
-
-                val selectableCount =
-                    state.actionRows.count { it.enabled }
-
-                if (selectableCount == 0) return
-
-                val next =
-                    (state.selectedIndex + delta + selectableCount) %
-                            selectableCount
-
-                state.copy(selectedIndex = next)
+                val count = state.actionRows.count { it.enabled }
+                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, count))
             }
         }
     }
 
 
     // -----------------------------
-    // Confirm
+    // Click Wheel Center Button
     // -----------------------------
-
     fun confirmSelection() {
         val state = _menuState.value
         val feeds = _feeds.value
@@ -169,104 +92,64 @@ class MenuViewModel(
                         slots = _slots.value,
                         maxSlots = MAX_SLOT_SIZE
                     )
-
-                    1 -> _menuState.value = MenuState.Categories(
-                        categories = sortedCategories()
-                    )
                 }
             }
 
             is MenuState.Downloaded -> {
-
-                val slots = _slots.value
-                val slotCount = slots.take(MAX_SLOT_SIZE).size
-                val hasAddNew = slots.size < MAX_SLOT_SIZE
+                val slotCount = state.slots.size
+                val hasAddNew = slotCount < state.maxSlots
                 val addNewIndex = slotCount
                 val backIndex = slotCount + if (hasAddNew) 1 else 0
 
                 when (state.selectedIndex) {
 
-                    addNewIndex.takeIf { hasAddNew } -> {
-                        _menuState.value = MenuState.Categories(
-                            categories = sortedCategories()
-                        )
-                    }
+                    addNewIndex.takeIf { hasAddNew } -> goCategories()
 
-                    backIndex -> {
-                        _menuState.value = MenuState.Home()
-                    }
+                    backIndex -> goHome()
 
                     else -> {
-                        // Selecting a downloaded episode slot
-                        val slot = _slots.value[state.selectedIndex]
-
+                        val slot = state.slots[state.selectedIndex]
                         _menuState.value = buildEpisodeDetailState(
                             feedIndex = slot.feedIndex,
                             episodeIndex = slot.episodeIndex,
                             episode = slot.loadedEpisode,
-                            selectedFromSlot = true // indicates DELETE mode if selected from Downloaded menu
+                            selectedFromSlot = true
                         )
                     }
                 }
             }
 
             is MenuState.Categories -> {
-                val categories = sortedCategories()
-
-                if (state.selectedIndex == categories.size) {
-                    _menuState.value = MenuState.Home()
+                if (state.selectedIndex == state.categories.size) {
+                    goHome()
                 } else {
-                    val selectedCategory = categories[state.selectedIndex]
-                    val filtered = filteredFeeds(selectedCategory)
-
-                    _menuState.value = MenuState.Feeds(
-                        categoryName = selectedCategory,
-                        feeds = filtered
-                    )
+                    val category = state.categories[state.selectedIndex]
+                    goFeeds(category)
                 }
             }
 
             is MenuState.Feeds -> {
-                val filtered = filteredFeeds(state.categoryName)
 
-                if (state.selectedIndex == filtered.size) {
-                    _menuState.value = MenuState.Categories(
-                        categories = sortedCategories()
-                    )
+                if (state.selectedIndex == state.feeds.size) {
+                    goCategories()
                 } else {
-                    val selectedFeed = filtered[state.selectedIndex]
-                    val feedIndex = feeds.indexOf(selectedFeed)
-
-                    _menuState.value = MenuState.Episodes(
-                        feedIndex = feedIndex,
-                        episodes = selectedFeed.episodes,
-                        categoryName = state.categoryName
-                    )
+                    val selectedFeed = state.feeds[state.selectedIndex]
+                    val feedIndex = _feeds.value.indexOf(selectedFeed)
+                    goEpisodes(feedIndex, state.categoryName)
                 }
             }
 
             is MenuState.Episodes -> {
-                val filtered = filteredFeeds(state.categoryName)
 
-                val feed = feeds.getOrNull(state.feedIndex) ?: run {
-                    _menuState.value = MenuState.Feeds(
-                        categoryName = state.categoryName,
-                        feeds = filtered
-                    )
-
-                    return
-                }
-
-                if (state.selectedIndex == feed.episodes.size) {
-                    _menuState.value = MenuState.Feeds(
-                        categoryName = state.categoryName,
-                        feeds = filtered
-                    )
+                if (state.selectedIndex == state.episodes.size) {
+                    goFeeds(state.categoryName)
                 } else {
+                    val episode = state.episodes[state.selectedIndex]
+
                     _menuState.value = buildEpisodeDetailState(
                         feedIndex = state.feedIndex,
                         episodeIndex = state.selectedIndex,
-                        episode = feed.episodes[state.selectedIndex],
+                        episode = episode,
                         selectedFromSlot = false
                     )
                 }
@@ -280,51 +163,23 @@ class MenuViewModel(
                         .getOrNull(state.selectedIndex)
                         ?: return
 
-                val feed = feeds[state.feedIndex]
+                val feed = _feeds.value[state.feedIndex]
                 val episode = feed.episodes[state.episodeIndex]
 
                 when (selectedAction.type) {
 
                     ActionRow.Type.DOWNLOAD -> {
-
-                        val newSlot = SlotState(
-                            feedIndex = state.feedIndex,
-                            episodeIndex = state.episodeIndex,
-                            loadedEpisode = episode,
-                            fileName = ""
-                        )
-
-                        _slots.value = _slots.value + newSlot
-                        persistSlots()
-
-                        _menuState.value = MenuState.Downloaded(
-                            slots = _slots.value,
-                            maxSlots = MAX_SLOT_SIZE
-                        )
+                        addSlot(state.feedIndex, state.episodeIndex, episode)
+                        goDownloaded()
                     }
 
                     ActionRow.Type.DELETE -> {
-
-                        _slots.value = _slots.value.filterNot {
-                            it.feedIndex == state.feedIndex &&
-                                    it.episodeIndex == state.episodeIndex
-                        }
-
-                        persistSlots()
-
-                        _menuState.value = MenuState.Downloaded(
-                            slots = _slots.value,
-                            maxSlots = MAX_SLOT_SIZE
-                        )
+                        removeSlot(state.feedIndex, state.episodeIndex)
+                        goDownloaded()
                     }
 
                     ActionRow.Type.BACK -> {
-                        _menuState.value =
-                            MenuState.Episodes(
-                                feedIndex = state.feedIndex,
-                                episodes = feed.episodes,
-                                categoryName = feed.category
-                            )
+                        goEpisodes(state.feedIndex, feed.category)
                     }
                 }
             }
@@ -332,26 +187,26 @@ class MenuViewModel(
     }
 
     // -----------------------------
-    // Back Button
+    // MENU BUTTON (CLICK WHEEL BACK)
     // -----------------------------
-
     fun onBack() {
-        val state = _menuState.value
+        _menuState.value = when (val state = _menuState.value) {
 
-        _menuState.value = when (state) {
             is MenuState.Home -> state
+
             is MenuState.Downloaded -> MenuState.Home()
+
             is MenuState.Categories -> MenuState.Home()
+
             is MenuState.Feeds -> MenuState.Categories(
                 categories = sortedCategories()
             )
-            is MenuState.Episodes -> {
-                val feedsForCategory = filteredFeeds(state.categoryName)
+
+            is MenuState.Episodes ->
                 MenuState.Feeds(
                     categoryName = state.categoryName,
-                    feeds = feedsForCategory
+                    feeds = filteredFeeds(state.categoryName)
                 )
-            }
 
             is MenuState.EpisodeDetail ->
                 MenuState.Episodes(
@@ -409,7 +264,7 @@ class MenuViewModel(
         )
     }
     // -----------------------------
-    // Helpers
+    // Data Helpers
     // -----------------------------
     private fun filteredFeeds(categoryName: String?): List<PodcastFeed> {
         return _feeds.value.filter { feed ->
@@ -422,6 +277,70 @@ class MenuViewModel(
         return _categories.value
             .distinct()
             .sorted()
+    }
+
+    // -----------------------------
+    // Navigation Helpers
+    // -----------------------------
+    private fun nextIndex(current: Int, delta: Int, size: Int): Int {
+        if (size <= 0) return current
+        return (current + delta + size) % size
+    }
+
+    private fun goHome() {
+        _menuState.value = MenuState.Home()
+    }
+
+    private fun goDownloaded() {
+        _menuState.value = MenuState.Downloaded(
+            slots = _slots.value,
+            maxSlots = MAX_SLOT_SIZE
+        )
+    }
+
+    private fun goCategories() {
+        _menuState.value = MenuState.Categories(
+            categories = sortedCategories()
+        )
+    }
+
+    private fun goFeeds(category: String?) {
+        _menuState.value = MenuState.Feeds(
+            categoryName = category,
+            feeds = filteredFeeds(category)
+        )
+    }
+
+    private fun goEpisodes(feedIndex: Int, category: String?) {
+        val feed = _feeds.value.getOrNull(feedIndex) ?: return
+        _menuState.value = MenuState.Episodes(
+            feedIndex = feedIndex,
+            episodes = feed.episodes,
+            categoryName = category
+        )
+    }
+
+    // -----------------------------
+    // Download Slot Management
+    // -----------------------------
+    private fun addSlot(feedIndex: Int, episodeIndex: Int, episode: PodcastEpisode) {
+        val newSlot = SlotState(
+            feedIndex = feedIndex,
+            episodeIndex = episodeIndex,
+            loadedEpisode = episode,
+            fileName = ""
+        )
+
+        _slots.value = (_slots.value + newSlot).take(MAX_SLOT_SIZE)
+        persistSlots()
+    }
+
+    private fun removeSlot(feedIndex: Int, episodeIndex: Int) {
+        _slots.value = _slots.value.filterNot {
+            it.feedIndex == feedIndex &&
+                    it.episodeIndex == episodeIndex
+        }
+        persistSlots()
     }
 
     private fun persistSlots() {
