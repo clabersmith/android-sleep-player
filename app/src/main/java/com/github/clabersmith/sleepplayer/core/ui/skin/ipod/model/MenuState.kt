@@ -1,5 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
+import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 
 sealed class MenuState(
@@ -11,28 +12,33 @@ sealed class MenuState(
     ) : MenuState()
 
     data class Downloaded(
-        override val selectedIndex: Int = 0,
-        val downloadedFeeds: List<PodcastFeed> = emptyList()
-    ) : MenuState()
+        val slots: List<SlotState>,
+        val maxSlots: Int,
+        override val selectedIndex: Int = 0
+    ) : MenuState(selectedIndex)
 
     data class Categories(
+        val categories: List<String>,
         override val selectedIndex: Int = 0
-    ) : MenuState()
+    ) : MenuState(selectedIndex)
 
     data class Feeds(
-        override val selectedIndex: Int = 0,
-        val categoryName: String? = null
-    ) : MenuState()
+        val categoryName: String?,
+        val feeds: List<PodcastFeed>,
+        override val selectedIndex: Int = 0
+    ) : MenuState(selectedIndex)
 
     data class Episodes(
         val feedIndex: Int,
-        val categoryName: String? = null,
+        val episodes: List<PodcastEpisode>,
+        val categoryName: String?,
         override val selectedIndex: Int = 0
     ) : MenuState()
 
     data class EpisodeDetail(
         val feedIndex: Int,
         val episodeIndex: Int,
+        val episode: PodcastEpisode,
         val actionRows: List<ActionRow> = emptyList(), // new
         override val selectedIndex: Int = 0
     ) : MenuState(selectedIndex)

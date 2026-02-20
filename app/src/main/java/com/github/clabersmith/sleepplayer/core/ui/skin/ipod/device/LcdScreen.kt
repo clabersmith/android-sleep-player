@@ -17,14 +17,12 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.EpisodeDetailMe
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.EpisodeMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.FeedMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.HomeMenu
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuConfig
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import kotlin.math.min
 
 @Composable
 fun LcdScreen(
     menuState: MenuState,
-    config: MenuConfig,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -55,16 +53,13 @@ fun LcdScreen(
 
                 // --- Dynamic Menu ---
                 when (menuState) {
-                    is MenuState.Home -> HomeMenu(config)
-                    is MenuState.Downloaded -> DownloadMenu(config)
-                    is MenuState.Categories -> CategoryMenu(config)
-                    is MenuState.Feeds -> FeedMenu(config)
-                    is MenuState.Episodes -> EpisodeMenu(config)
+                    is MenuState.Home -> HomeMenu(menuState)
+                    is MenuState.Downloaded -> DownloadMenu(menuState)
+                    is MenuState.Categories -> CategoryMenu(menuState)
+                    is MenuState.Feeds -> FeedMenu(menuState)
+                    is MenuState.Episodes -> EpisodeMenu(menuState)
                     is MenuState.EpisodeDetail -> {
-                        EpisodeDetailMenu(
-                            config = config,
-                            actionRows = menuState.actionRows
-                        )
+                        EpisodeDetailMenu(menuState)
                     }
                 }
             }

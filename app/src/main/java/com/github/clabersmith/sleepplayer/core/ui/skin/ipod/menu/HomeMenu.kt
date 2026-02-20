@@ -1,13 +1,21 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu
 
 import androidx.compose.runtime.Composable
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuConfig
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 
 @Composable
 fun HomeMenu(
-    config: MenuConfig
+    state: MenuState.Home
 ) {
+    val items = listOf(
+        "Download",
+        "Play",
+        "Settings",
+        "Exit"
+    )
+
     MenuList(
-        config = config
+        items = items,
+        selectedIndex = state.selectedIndex
     )
 }

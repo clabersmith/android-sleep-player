@@ -12,17 +12,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.MenuRow
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuConfig
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 
 @Composable
 fun EpisodeDetailMenu(
-    config: MenuConfig,
-    actionRows: List<ActionRow>
+    state: MenuState.EpisodeDetail
 ) {
     val actionStartIndex = 4
-    val enabledActions = actionRows.filter { it.enabled }
+    val enabledActions = state.actionRows.filter { it.enabled }
+
+    val episode = state.episode
+
+    val items = listOf(
+        episode.title,
+        "",
+        episode.description.take(120),
+        ""
+    ) + state.actionRows.map { it.label }
 
     Column(
         modifier = Modifier
@@ -30,7 +37,7 @@ fun EpisodeDetailMenu(
             .padding(8.dp)
     ) {
 
-        config.items.forEachIndexed { index, item ->
+        items.forEachIndexed { index, item ->
 
             when {
 
@@ -47,10 +54,11 @@ fun EpisodeDetailMenu(
 
                 else -> {
                     val actionIndex = index - actionStartIndex
-                    val actionRow = actionRows.getOrNull(actionIndex)
+                    val actionRow =
+                        state.actionRows.getOrNull(actionIndex)
 
                     val selectedAction =
-                        enabledActions.getOrNull(config.selectedIndex)
+                        enabledActions.getOrNull(state.selectedIndex)
 
                     val isSelected =
                         actionRow != null &&

@@ -37,7 +37,6 @@ fun IpodScreen(
         else IpodClickWheelTextColorLight
 
     val menuState by viewModel.menuState.collectAsState()
-    val config by viewModel.menuConfig.collectAsState()
 
     val context = LocalContext.current
 
@@ -73,8 +72,7 @@ fun IpodScreen(
         Spacer(Modifier.height(24.dp))
 
         LcdScreen(
-            menuState = menuState,
-            config = config
+            menuState = menuState
         )
 
         Spacer(Modifier.height(36.dp))
