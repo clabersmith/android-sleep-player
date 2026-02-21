@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
 
 class PersistedSlotRepository(
     private val dataStore: DataStore<Preferences>
-) {
+) : SlotRepository {
 
     companion object {
         val SLOTS_KEY = stringPreferencesKey("slots_json")
@@ -21,7 +21,7 @@ class PersistedSlotRepository(
         encodeDefaults = true
     }
 
-    suspend fun saveSlots(slots: List<PersistedSlot>) {
+    override suspend fun saveSlots(slots: List<PersistedSlot>) {
         val slotsJson = json.encodeToString(
             ListSerializer(PersistedSlot.serializer()),
             slots
@@ -32,7 +32,7 @@ class PersistedSlotRepository(
         }
     }
 
-    suspend fun loadSlots(): List<PersistedSlot> {
+    override suspend fun loadSlots(): List<PersistedSlot> {
         val prefs = dataStore.data.first()
         val slotsJson = prefs[SLOTS_KEY] ?: return emptyList()
 
@@ -44,7 +44,7 @@ class PersistedSlotRepository(
         }.getOrDefault(emptyList())
     }
 
-    suspend fun clear() {
+    override suspend fun clear() {
         dataStore.edit { it.remove(SLOTS_KEY) }
     }
 }

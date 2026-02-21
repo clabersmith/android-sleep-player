@@ -10,6 +10,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlotRepository
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.DownloadConstants.MAX_SLOT_SIZE
@@ -21,7 +22,7 @@ import kotlinx.coroutines.launch
 
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
-    private val persistedSlotRepository: PersistedSlotRepository
+    private val persistedSlotRepository: SlotRepository
 ) : ViewModel() {
 
     private val _menuState = MutableStateFlow<MenuState>(MenuState.Home())

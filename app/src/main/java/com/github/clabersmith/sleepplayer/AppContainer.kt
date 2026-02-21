@@ -3,6 +3,7 @@ package com.github.clabersmith.sleepplayer
 import android.content.Context
 import com.github.clabersmith.sleepplayer.core.data.datastore.slotDataStore
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlotRepository
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.remote.HttpClientProvider
 import com.github.clabersmith.sleepplayer.features.podcasts.data.remote.HttpPodcastDataSource
 import com.github.clabersmith.sleepplayer.features.podcasts.data.repository.DefaultPodcastRepository
@@ -20,5 +21,6 @@ class AppContainer(context: Context) {
     val podcastRepository: PodcastRepository =
         DefaultPodcastRepository(dataSource)
 
-    val persistedSlotRepository = PersistedSlotRepository(context.slotDataStore)
+    val persistedSlotRepository: SlotRepository
+        = PersistedSlotRepository(context.slotDataStore)
 }
