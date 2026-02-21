@@ -7,5 +7,5 @@ data class PersistedSlot(
     val feedIndex: Int,
     val episodeIndex: Int,
     val episodeId: String,
-    val fileName: String
+    val filePath: String
 )

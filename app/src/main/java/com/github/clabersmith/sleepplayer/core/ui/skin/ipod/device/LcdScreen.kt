@@ -54,7 +54,7 @@ fun LcdScreen(
                 // --- Dynamic Menu ---
                 when (menuState) {
                     is MenuState.Home -> HomeMenu(menuState)
-                    is MenuState.Downloaded -> DownloadMenu(menuState)
+                    is MenuState.Download -> DownloadMenu(menuState)
                     is MenuState.Categories -> CategoryMenu(menuState)
                     is MenuState.Feeds -> FeedMenu(menuState)
                     is MenuState.Episodes -> EpisodeMenu(menuState)
@@ -70,7 +70,7 @@ fun LcdScreen(
 private fun MenuState.title(): String {
     return when (this) {
         is MenuState.Home -> "SleepPod"
-        is MenuState.Downloaded -> "Downloaded"
+        is MenuState.Download -> "Downloaded"
         is MenuState.Categories -> "Categories"
         is MenuState.Feeds -> categoryName ?: "Feeds"
         is MenuState.Episodes -> "Episodes"

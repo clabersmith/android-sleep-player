@@ -18,11 +18,13 @@ object HttpClientProvider {
                     isLenient = true
                 })
             }
+
             install(HttpTimeout) {
                 requestTimeoutMillis = 5 * 60 * 1000
                 connectTimeoutMillis = 30_000
                 socketTimeoutMillis = 5 * 60 * 1000
             }
+            
         }
     }
 }

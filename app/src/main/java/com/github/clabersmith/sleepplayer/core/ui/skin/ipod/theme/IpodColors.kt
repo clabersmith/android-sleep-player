@@ -10,6 +10,7 @@ val IpodClickWheelTextColorDark = Color(0xFF1E1E1E)
 val IpodTextPrimary = Color(0xFF28305E)
 
 val IpodMenuHighlight = Color(0xFF2B4EA2)
+val IpodMenuDownloadProgress = Color(0xFF5B7ED6) // lighter than highlight
 
 fun Color.blend(target: Color, amount: Float): Color {
     return Color(

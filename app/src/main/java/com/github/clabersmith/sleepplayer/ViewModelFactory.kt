@@ -3,6 +3,7 @@ package com.github.clabersmith.sleepplayer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuViewModel
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 
 class ViewModelFactory(
@@ -11,10 +12,13 @@ class ViewModelFactory(
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MenuViewModel::class.java)) {
+
             @Suppress("UNCHECKED_CAST")
             return MenuViewModel(
                 podcastRepository = container.podcastRepository,
-                persistedSlotRepository = container.persistedSlotRepository) as T
+                persistedSlotRepository = container.persistedSlotRepository,
+                downloader = container.downloader,
+                storage = container.storage) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

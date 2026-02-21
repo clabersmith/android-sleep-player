@@ -1,12 +1,16 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
-data class ActionRow(
-    val label: String,
-    val type: Type,
-    val enabled: Boolean
-) {
-    enum class Type {
-        DOWNLOAD,
-        DELETE
-    }
+sealed class ActionRow {
+
+    data object Download : ActionRow()
+
+    data class Downloading(
+        val progress: Float
+    ) : ActionRow()
+
+    data object Cancel : ActionRow()
+
+    data object Delete : ActionRow()
+
+    data object AlreadyDownloaded : ActionRow()
 }

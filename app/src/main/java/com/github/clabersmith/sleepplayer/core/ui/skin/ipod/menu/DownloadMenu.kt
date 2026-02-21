@@ -5,7 +5,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 
 @Composable
 fun DownloadMenu(
-    state: MenuState.Downloaded
+    state: MenuState.Download
 ) {
     val slotTitles = state.slots.map {
         it.loadedEpisode.title

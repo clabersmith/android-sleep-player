@@ -1,11 +1,8 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.emptyPreferences
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlot
-import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
@@ -18,8 +15,6 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertFalse
 
@@ -72,13 +67,25 @@ class MenuViewModelTest() {
         }
     }
 
+    private val fakeDownloader: PodcastDownloader = object : PodcastDownloader {
+        override suspend fun downloadEpisode(episode: PodcastEpisode): Result<String> {
+            return Result.success("fake_file_path")
+        }
+
+        override suspend fun deleteDownload(fileName: String): Result<Unit> {
+            return Result.success(Unit)
+        }
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `loads feeds on init`() = runTest {
 
         val viewModel = MenuViewModel(
             fakeRepository,
-            fakePersistedSlotRepository
+            fakePersistedSlotRepository,
+            fakeDownloader,
+            storage
         )
 
         advanceUntilIdle()
@@ -160,7 +167,7 @@ class MenuViewModelTest() {
         // EpisodeDetail
         click(viewModel) // DOWNLOAD
 
-        val state = viewModel.menuState.value as MenuState.Downloaded
+        val state = viewModel.menuState.value as MenuState.Download
         assertEquals(1, state.slots.size)
     }
 
@@ -184,7 +191,7 @@ class MenuViewModelTest() {
         // Delete
         click(viewModel)
 
-        val state = viewModel.menuState.value as MenuState.Downloaded
+        val state = viewModel.menuState.value as MenuState.Download
         assertEquals(0, state.slots.size)
     }
 
@@ -201,7 +208,7 @@ class MenuViewModelTest() {
 
         // Download first, should take back to Downloads menu
         click(viewModel)
-        assertTrue(viewModel.menuState.value is MenuState.Downloaded)
+        assertTrue(viewModel.menuState.value is MenuState.Download)
 
         viewModel.moveSelection(1) // Move to 'Add New'
 
@@ -238,7 +245,7 @@ class MenuViewModelTest() {
         viewModel.confirmSelection() // Home -> Downloads
         advanceUntilIdle()
 
-        val state = viewModel.menuState.value as MenuState.Downloaded
+        val state = viewModel.menuState.value as MenuState.Download
 
         assertEquals(1, state.slots.size)
     }
