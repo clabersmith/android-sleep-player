@@ -6,7 +6,7 @@ data class SlotState(
     val feedIndex: Int,
     val episodeIndex: Int,
     val loadedEpisode: PodcastEpisode,
-    val filePath: String?
+    val fileName: String?
 )
 
 fun SlotState.toPersisted() =
@@ -14,5 +14,5 @@ fun SlotState.toPersisted() =
         feedIndex = feedIndex,
         episodeIndex = episodeIndex,
         episodeId = loadedEpisode.id,
-        filePath = filePath ?: ""
+        fileName = fileName ?: ""
     )

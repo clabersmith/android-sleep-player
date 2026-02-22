@@ -9,8 +9,10 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.Epis
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
+import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
@@ -27,20 +29,19 @@ import kotlin.coroutines.cancellation.CancellationException
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val persistedSlotRepository: SlotRepository,
-    private val downloader: PodcastDownloader,
-    private val storage: AudioFileStorage
+    private val downloader: Downloader,
+    private val storage: FileStorage
 ) : ViewModel() {
 
     private val _menuState = MutableStateFlow<MenuState>(MenuState.Home())
     val menuState: StateFlow<MenuState> = _menuState
 
     private val _feeds = MutableStateFlow<List<PodcastFeed>>(emptyList())
-
     private val _categories = MutableStateFlow<List<String>>(emptyList())
-
     private val _slots = MutableStateFlow<List<SlotState>>(emptyList())
 
     private var downloadJob: Job? = null
+    private var currentDownloadFileName: String? = null
 
     init {
         load()
@@ -207,7 +208,8 @@ class MenuViewModel(
                                     }
                                 }
 
-                                addSlot(state.feedIndex, state.episodeIndex, episode)
+                                addSlot(state.feedIndex, state.episodeIndex,
+                                    episode, file.name)
                                 goDownloaded()
 
                             } catch (e: CancellationException) {
@@ -231,9 +233,16 @@ class MenuViewModel(
                                     it.episodeIndex == state.episodeIndex
                         }
 
-                        storage.deleteFile(slot?.filePath)
+                        if (slot != null) {
+                            val deleted = storage.deleteFile(slot.fileName)
 
-                        removeSlot(state.feedIndex, state.episodeIndex)
+                            if (!deleted) {
+                                println("Warning: file not found during delete")
+                            }
+
+                            removeSlot(slot.feedIndex, slot.episodeIndex)
+                        }
+
                         goDownloaded()
                     }
 
@@ -386,12 +395,12 @@ class MenuViewModel(
     // -----------------------------
     // Download Slot Management
     // -----------------------------
-    private fun addSlot(feedIndex: Int, episodeIndex: Int, episode: PodcastEpisode) {
+    private fun addSlot(feedIndex: Int, episodeIndex: Int, episode: PodcastEpisode, fileName: String) {
         val newSlot = SlotState(
             feedIndex = feedIndex,
             episodeIndex = episodeIndex,
             loadedEpisode = episode,
-            filePath = ""
+            fileName = fileName
         )
 
         _slots.value = (_slots.value + newSlot).take(MAX_SLOT_SIZE)
@@ -420,7 +429,7 @@ class MenuViewModel(
 
             _slots.value = persisted.mapNotNull { p ->
 
-                if (!storage.fileExists(p.filePath)) {
+                if (!storage.fileExists(p.fileName)) {
                     return@mapNotNull null
                 }
 
@@ -435,7 +444,7 @@ class MenuViewModel(
                     feedIndex = p.feedIndex,
                     episodeIndex = p.episodeIndex,
                     loadedEpisode = episode,
-                    filePath = p.filePath
+                    fileName = p.fileName
                 )
             }.take(MAX_SLOT_SIZE)
 

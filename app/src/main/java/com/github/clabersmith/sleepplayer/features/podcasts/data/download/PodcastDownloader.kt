@@ -9,49 +9,81 @@ import io.ktor.http.contentLength
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.copyTo
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.ensureActive
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 
 class PodcastDownloader(
     private val client: HttpClient,
     private val storage: AudioFileStorage
-) {
+):  Downloader {
 
-    suspend fun download(
+    companion object {
+        val BUFFER_SIZE = 128 * 1024
+    }
+
+    override suspend fun download(
         url: String,
         fileName: String,
         onProgress: (Float) -> Unit
     ): File {
 
-        val file = storage.createFile(fileName)
+
+
         val testUrl =
             "https://dts.podtrac.com/redirect.mp3/dovetail.prxu.org/_/137/2270a71f-9327-40f1-b8a9-6dff83c79028/SWMP_1414_Datas_Mom_SnoreTrekTNGDatasMom_2.1.26_PP-1.mp3"
 
-        client.prepareGet(testUrl).execute { response ->
+        val file = storage.createFile(fileName)
 
-            val channel = response.body<ByteReadChannel>()
+        try {
+            client.prepareGet(testUrl).execute { response ->
 
-            val totalBytes = response.contentLength() ?: -1L
-            var downloadedBytes = 0L
+                val channel = response.body<ByteReadChannel>()
 
-            file.outputStream().use { output ->
+                val totalBytes = response.contentLength() ?: -1L
+                var downloadedBytes = 0L
 
-                val buffer = ByteArray(8192)
+                file.outputStream().buffered(BUFFER_SIZE).use { output ->
 
-                while (!channel.isClosedForRead) {
+                    val buffer = ByteArray(BUFFER_SIZE)
+                    var lastProgress = 0f
 
-                    val read = channel.readAvailable(buffer)
-                    if (read == -1) break
+                    while (!channel.isClosedForRead) {
 
-                    output.write(buffer, 0, read)
-                    downloadedBytes += read
+                        // throws CancellationException if cancelled
+                        coroutineContext.ensureActive()
 
-                    if (totalBytes > 0) {
-                        onProgress(downloadedBytes.toFloat() / totalBytes)
+                        val read = channel.readAvailable(buffer)
+                        if (read == -1) break
+
+                        output.write(buffer, 0, read)
+                        downloadedBytes += read
+
+                        if (totalBytes > 0) {
+                            val progress = downloadedBytes.toFloat() / totalBytes
+
+                            // Only update every 1%
+                            if (progress - lastProgress >= 0.01f || progress == 1f) {
+                                lastProgress = progress
+                                onProgress(progress)
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        return file
+            return file
+
+        } catch (e: CancellationException) {
+            // delete partial file
+            file.delete()
+            throw e
+
+        } catch (e: Exception) {
+            // delete corrupted file
+            file.delete()
+            throw e
+        }
     }
 }
