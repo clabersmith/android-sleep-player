@@ -5,7 +5,7 @@ sealed class ActionRow {
     data object Download : ActionRow()
 
     data class Downloading(
-        val progress: Float
+        val progress: Float = 0f
     ) : ActionRow()
 
     data object Cancel : ActionRow()

@@ -10,8 +10,6 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
-import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
-import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
@@ -28,10 +26,10 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
-    private val persistedSlotRepository: SlotRepository,
+    private val slotRepository: SlotRepository,
     private val downloader: Downloader,
     private val storage: FileStorage
-) : ViewModel() {
+) : ViewModel(), MenuActions {
 
     private val _menuState = MutableStateFlow<MenuState>(MenuState.Home())
     val menuState: StateFlow<MenuState> = _menuState
@@ -61,205 +59,173 @@ class MenuViewModel(
     // Click Wheel Movement
     // -----------------------------
     fun moveSelection(delta: Int) {
-        _menuState.value = when (val state = _menuState.value) {
+        val state = _menuState.value
 
-            is MenuState.Home ->
-                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, 4))
-
-            is MenuState.Download -> {
-                val total =
-                    state.slots.size + (if (state.slots.size < state.maxSlots) 1 else 0)
-                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, total))
-            }
-
-            is MenuState.Categories ->
-                state.copy(
-                    selectedIndex = nextIndex(
-                        state.selectedIndex,
-                        delta,
-                        state.categories.size
-                    )
-                )
-
-            is MenuState.Feeds ->
-                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, state.feeds.size))
-
-            is MenuState.Episodes ->
-                state.copy(
-                    selectedIndex = nextIndex(
-                        state.selectedIndex,
-                        delta,
-                        state.episodes.size
-                    )
-                )
-
-            is MenuState.EpisodeDetail -> {
-                val count = state.actionRows.size
-                state.copy(selectedIndex = nextIndex(state.selectedIndex, delta, count))
-            }
-        }
+        _menuState.value = state.copyWithIndex(
+            nextIndex(state.selectedIndex, delta, state.itemCount)
+        )
     }
-
 
     // -----------------------------
     // Click Wheel Center Button
     // -----------------------------
     fun confirmSelection() {
-        val state = _menuState.value
+        val current = _menuState.value
+        _menuState.value = current.onConfirm(actions = this)
+    }
 
-        when (state) {
+    override fun buildDownloadState(): MenuState.Download {
+        println("Building Download State with slots: ${_slots.value}")
+        return MenuState.Download(
+            slots = _slots.value,
+            maxSlots = MAX_SLOT_SIZE,
+            selectedIndex = 0
+        )
+    }
 
-            is MenuState.Home -> {
-                when (state.selectedIndex) {
-                    0 -> _menuState.value = MenuState.Download(
-                        slots = _slots.value,
-                        maxSlots = MAX_SLOT_SIZE
+    override fun buildCategoriesState(): MenuState.Categories {
+        return MenuState.Categories(
+            categories = _categories.value.sorted(),
+            selectedIndex = 0
+        )
+    }
+
+    override fun buildFeedsState(category: String): MenuState.Feeds {
+        val feeds = _feeds.value
+            .filter { it.category == category }
+
+        return MenuState.Feeds(
+            feeds = feeds,
+            categoryName = category,
+            selectedIndex = 0
+        )
+    }
+
+    override fun buildEpisodesState(
+        feedIndex: Int,
+        categoryName: String
+    ): MenuState.Episodes {
+
+        val feed = _feeds.value[feedIndex]
+
+        return MenuState.Episodes(
+            episodes = feed.episodes,
+            feedIndex = feedIndex,
+            categoryName = categoryName,
+            selectedIndex = 0
+        )
+    }
+
+    override fun feedIndexOf(feed: PodcastFeed): Int {
+        return _feeds.value.indexOf(feed)
+    }
+
+
+    override fun startDownload(state: MenuState.EpisodeDetail) {
+        if (state.isDownloading) return
+
+        downloadJob?.cancel()
+
+        downloadJob = viewModelScope.launch {
+
+            val result = downloadEpisode(state)
+
+            println("Download result: $result")
+
+            when (result) {
+                is DownloadResult.Success -> {
+                    _menuState.value = buildDownloadState()
+                }
+
+                is DownloadResult.Cancelled -> {
+                    // Return to non-downloading episode detail
+                    _menuState.value = state.copy(
+                        isDownloading = false,
+                        actionRows = listOf(ActionRow.Download),
+                        selectedIndex = 0
                     )
                 }
-            }
 
-            is MenuState.Download -> {
-                val slotCount = state.slots.size
-                val hasAddNew = slotCount < state.maxSlots
-                val addNewIndex = slotCount
-
-                when (state.selectedIndex) {
-
-                    addNewIndex.takeIf { hasAddNew } -> goCategories()
-
-                    else -> {
-                        val slot = state.slots[state.selectedIndex]
-                        _menuState.value = buildEpisodeDetailState(
-                            feedIndex = slot.feedIndex,
-                            episodeIndex = slot.episodeIndex,
-                            episode = slot.loadedEpisode,
-                            origin = DOWNLOAD
-                        )
-                    }
-                }
-            }
-
-            is MenuState.Categories -> {
-                val category = state.categories[state.selectedIndex]
-                goFeeds(category)
-            }
-
-            is MenuState.Feeds -> {
-                val selectedFeed = state.feeds[state.selectedIndex]
-                val feedIndex = _feeds.value.indexOf(selectedFeed)
-                goEpisodes(feedIndex, state.categoryName)
-            }
-
-            is MenuState.Episodes -> {
-                val episode = state.episodes[state.selectedIndex]
-
-                _menuState.value = buildEpisodeDetailState(
-                    feedIndex = state.feedIndex,
-                    episodeIndex = state.selectedIndex,
-                    episode = episode,
-                    origin = EPISODES
-                )
-            }
-
-            is MenuState.EpisodeDetail -> {
-                val selectedAction =
-                    state.actionRows
-                        .getOrNull(state.selectedIndex)
-                        ?: return
-
-                val feed = _feeds.value[state.feedIndex]
-                val episode = feed.episodes[state.episodeIndex]
-
-                when (selectedAction) {
-                    ActionRow.Download -> {
-
-                        if (state.isDownloading) return
-
-                        // Switch to downloading state
-                        _menuState.value = state.copy(
-                            isDownloading = true,
-                            actionRows = listOf(
-                                ActionRow.Downloading(progress = 0f),
-                                ActionRow.Cancel
-                            ),
-                            selectedIndex = 1 // highlight Cancel
-                        )
-
-                        downloadJob = viewModelScope.launch {
-
-                            try {
-
-                                val file = downloader.download(
-                                    url = episode.audioUrl,
-                                    fileName = generateSafeFileName(episode)
-                                ) { progress ->
-
-                                    _menuState.update { current ->
-                                        if (current is MenuState.EpisodeDetail &&
-                                            current.isDownloading
-                                        ) {
-                                            current.copy(
-                                                actionRows = listOf(
-                                                    ActionRow.Downloading(progress),
-                                                    ActionRow.Cancel
-                                                )
-                                            )
-                                        } else current
-                                    }
-                                }
-
-                                addSlot(state.feedIndex, state.episodeIndex,
-                                    episode, file.name)
-                                goDownloaded()
-
-                            } catch (e: CancellationException) {
-                                // expected on cancel
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                restoreEpisodeDetail(state)
-                            }
-                        }
-                    }
-
-                    ActionRow.Cancel -> {
-                        downloadJob?.cancel()
-                        restoreEpisodeDetail(state)
-                    }
-
-                    ActionRow.Delete -> {
-
-                        val slot = _slots.value.find {
-                            it.feedIndex == state.feedIndex &&
-                                    it.episodeIndex == state.episodeIndex
-                        }
-
-                        if (slot != null) {
-                            val deleted = storage.deleteFile(slot.fileName)
-
-                            if (!deleted) {
-                                println("Warning: file not found during delete")
-                            }
-
-                            removeSlot(slot.feedIndex, slot.episodeIndex)
-                        }
-
-                        goDownloaded()
-                    }
-
-                    ActionRow.AlreadyDownloaded -> {
-                        // no-op
-                    }
-
-                    is ActionRow.Downloading -> {
-                        // progress row not clickable
-                    }
+                is DownloadResult.Error -> {
+                    _menuState.value = state.copy(
+                        isDownloading = false,
+                        actionRows = listOf(ActionRow.Download),
+                        selectedIndex = 0
+                    )
                 }
             }
         }
     }
 
+    private suspend fun downloadEpisode(
+        state: MenuState.EpisodeDetail
+    ): DownloadResult {
+
+        val feed = _feeds.value.getOrNull(state.feedIndex)
+            ?: return DownloadResult.Error(IllegalStateException("Invalid feed index"))
+
+        val episode = feed.episodes.getOrNull(state.episodeIndex)
+            ?: return DownloadResult.Error(IllegalStateException("Invalid episode index"))
+
+        return try {
+
+            val file = downloader.download(
+                url = episode.audioUrl,
+                fileName = generateSafeFileName(episode),
+                onProgress = { progress ->
+                    updateDownloadProgress(progress)
+                }
+            )
+
+            addSlot(
+                state.feedIndex,
+                state.episodeIndex,
+                episode,
+                file.name
+            )
+
+            DownloadResult.Success(file.name)
+
+        } catch (e: CancellationException) {
+            DownloadResult.Cancelled
+
+        } catch (e: Exception) {
+            DownloadResult.Error(e)
+        }
+    }
+
+    fun updateDownloadProgress(progress: Float) {
+        _menuState.update { current ->
+            if (current is MenuState.EpisodeDetail && current.isDownloading) {
+                current.copy(
+                    actionRows = listOf(
+                        ActionRow.Downloading(progress),
+                        ActionRow.Cancel
+                    )
+                )
+            } else current
+        }
+    }
+
+    override fun cancelDownload(state: MenuState.EpisodeDetail) {
+        downloadJob?.cancel()
+        restoreEpisodeDetail(state)
+    }
+
+    override fun deleteEpisode(state: MenuState.EpisodeDetail) {
+        val slot = _slots.value.find {
+            it.feedIndex == state.feedIndex &&
+                    it.episodeIndex == state.episodeIndex
+        } ?: return
+
+        storage.deleteFile(slot.fileName)
+        removeSlot(slot.feedIndex, slot.episodeIndex)
+        goDownloaded()
+    }
+
+
     // -----------------------------
-    // MENU BUTTON (CLICK WHEEL BACK)
+    // Menu Button (Click Wheel Back
     // -----------------------------
     fun onMenuShortPress() {
         _menuState.value = goUp()
@@ -284,7 +250,7 @@ class MenuViewModel(
 
             is MenuState.Episodes ->
                 MenuState.Feeds(
-                    categoryName = state.categoryName,
+                    categoryName = state.categoryName ?: "",
                     feeds = filteredFeeds(state.categoryName)
                 )
 
@@ -309,7 +275,7 @@ class MenuViewModel(
         }
     }
 
-    private fun buildEpisodeDetailState(
+    override fun buildEpisodeDetailState(
         feedIndex: Int,
         episodeIndex: Int,
         episode: PodcastEpisode,
@@ -363,33 +329,8 @@ class MenuViewModel(
         return (current + delta + size) % size
     }
 
-    private fun goDownloaded() {
-        _menuState.value = MenuState.Download(
-            slots = _slots.value,
-            maxSlots = MAX_SLOT_SIZE
-        )
-    }
-
-    private fun goCategories() {
-        _menuState.value = MenuState.Categories(
-            categories = sortedCategories()
-        )
-    }
-
-    private fun goFeeds(category: String?) {
-        _menuState.value = MenuState.Feeds(
-            categoryName = category,
-            feeds = filteredFeeds(category)
-        )
-    }
-
-    private fun goEpisodes(feedIndex: Int, category: String?) {
-        val feed = _feeds.value.getOrNull(feedIndex) ?: return
-        _menuState.value = MenuState.Episodes(
-            feedIndex = feedIndex,
-            episodes = feed.episodes,
-            categoryName = category
-        )
+    fun goDownloaded(): MenuState {
+        return buildDownloadState()
     }
 
     // -----------------------------
@@ -417,7 +358,7 @@ class MenuViewModel(
 
     private fun persistSlots() {
         viewModelScope.launch {
-            persistedSlotRepository.saveSlots(
+            slotRepository.saveSlots(
                 _slots.value.map { it.toPersisted() }
             )
         }
@@ -425,7 +366,7 @@ class MenuViewModel(
 
     private fun restoreSlots() {
         viewModelScope.launch {
-            val persisted = persistedSlotRepository.loadSlots()
+            val persisted = slotRepository.loadSlots()
 
             _slots.value = persisted.mapNotNull { p ->
 
@@ -482,3 +423,31 @@ class MenuViewModel(
         )
     }
 }
+
+interface MenuActions {
+    fun buildDownloadState(): MenuState
+    fun buildCategoriesState(): MenuState
+    fun buildFeedsState(category: String): MenuState
+    fun buildEpisodesState(feedIndex: Int, categoryName: String): MenuState
+    fun buildEpisodeDetailState(
+        feedIndex: Int,
+        episodeIndex: Int,
+        episode: PodcastEpisode,
+        origin: MenuState.EpisodeDetail.Origin
+    ): MenuState
+
+    fun feedIndexOf(feed: PodcastFeed): Int
+
+    // Side-effect actions
+    fun startDownload(state: MenuState.EpisodeDetail)
+    fun cancelDownload(state: MenuState.EpisodeDetail)
+    fun deleteEpisode(state: MenuState.EpisodeDetail)
+}
+
+sealed class DownloadResult {
+    data class Success(val fileName: String) : DownloadResult()
+    object Cancelled : DownloadResult()
+    data class Error(val throwable: Throwable) : DownloadResult()
+}
+
+

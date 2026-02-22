@@ -1,7 +1,9 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
-import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
+import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlot
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
@@ -15,9 +17,13 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import java.io.File
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MenuViewModelTest() {
 
     @get:Rule
@@ -50,8 +56,6 @@ class MenuViewModelTest() {
 
     private val fakePersistedSlotRepository = object : SlotRepository {
 
-        var saveCallCount = 0
-
         private var stored: List<PersistedSlot> = emptyList()
 
         override suspend fun saveSlots(slots: List<PersistedSlot>) {
@@ -66,43 +70,93 @@ class MenuViewModelTest() {
             stored = emptyList()
         }
     }
-
-    private val fakeDownloader: PodcastDownloader = object : PodcastDownloader {
-        override suspend fun downloadEpisode(episode: PodcastEpisode): Result<String> {
-            return Result.success("fake_file_path")
+    private val successFakeDownloader: Downloader = object : Downloader {
+        override suspend fun download(
+            url: String,
+            fileName: String,
+            onProgress: (Float) -> Unit,
+        ): File {
+            delay(10) // ensures intermediate state is visible
+            return File("dummy")
         }
 
-        override suspend fun deleteDownload(fileName: String): Result<Unit> {
-            return Result.success(Unit)
+    }
+
+    private val hangingDownloader: Downloader = object : Downloader {
+        override suspend fun download(
+            url: String,
+            fileName: String,
+            onProgress: (Float) -> Unit,
+        ): File {
+            delay(Long.MAX_VALUE)
+            return File("never")
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    private val failingDownloader = object : Downloader {
+        override suspend fun download(
+            url: String,
+            fileName: String,
+            onProgress: (Float) -> Unit,
+        ): File {
+            throw RuntimeException("Network error")
+        }
+    }
+
+    private class ProgressFakeDownloader : Downloader {
+
+        lateinit var progressCallback: (Float) -> Unit
+
+        override suspend fun download(
+            url: String,
+            fileName: String,
+            onProgress: (Float) -> Unit,
+        ): File {
+            progressCallback = onProgress
+            delay(Long.MAX_VALUE)
+            return File("dummy")
+        }
+    }
+
+    private class FakeFileStorage : FileStorage {
+
+        var deletedFileName: String? = null
+
+        override fun createFile(fileName: String): File {
+            return File("dummy")
+        }
+
+        override fun fileExists(fileName: String?): Boolean = true
+
+        override fun deleteFile(fileName: String?): Boolean {
+            deletedFileName = fileName
+            return true
+        }
+    }
+
+    private val fakeFileStorage : FakeFileStorage = FakeFileStorage()
+
     @Test
     fun `loads feeds on init`() = runTest {
 
-        val viewModel = MenuViewModel(
-            fakeRepository,
-            fakePersistedSlotRepository,
-            fakeDownloader,
-            storage
-        )
+        val viewModel = createNewViewModel()
 
         advanceUntilIdle()
 
         // Navigate Home -> Downloads
-                click(viewModel)
+        click(viewModel)
         // Downloads -> Categories
         click(viewModel)
         // Categories -> Feeds
         click(viewModel)
+
         val state = viewModel.menuState.value as MenuState.Feeds
         assertEquals("Test Podcast 1", state.feeds.first().title)
     }
 
     @Test
     fun `rotate forward increments index`() {
-        val viewModel = createViewModelWithMenuState(MenuState.Home())
+        val viewModel = createNewViewModel()
 
         viewModel.moveSelection(1)
 
@@ -112,7 +166,7 @@ class MenuViewModelTest() {
 
     @Test
     fun `rotate backward wraps to last index`() {
-        val viewModel = createViewModelWithMenuState(MenuState.Home())
+        val viewModel = createNewViewModel()
 
         viewModel.moveSelection(-1)
 
@@ -122,7 +176,7 @@ class MenuViewModelTest() {
 
     @Test
     fun `forward wrap goes to zero`() {
-        val viewModel = createViewModelWithMenuState(MenuState.Home())
+        val viewModel = createNewViewModel()
 
         viewModel.moveSelection(3)
         viewModel.moveSelection(1)
@@ -130,14 +184,10 @@ class MenuViewModelTest() {
         assertEquals(0, viewModel.menuState.value.selectedIndex)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `moveSelection ignored in episode detail`() = runTest {
 
-        val viewModel = MenuViewModel(
-            fakeRepository,
-            fakePersistedSlotRepository
-        )
+        val viewModel = createNewViewModel()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -152,33 +202,125 @@ class MenuViewModelTest() {
     // Tests for actions in Episode Detail menu
     //--------------
 
+    @Test
+    fun `download enters downloading state`() = runTest {
+        val viewModel = createNewViewModel()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+        navigateToEpisodeDetailDownload(viewModel)
+
+        viewModel.confirmSelection()
+
+        val state = viewModel.menuState.value as MenuState.EpisodeDetail
+
+        assertTrue(state.isDownloading)
+        assertTrue(state.actionRows.first() is ActionRow.Downloading)
+    }
+
     @Test
     fun `download action adds slot`() = runTest {
 
-        val viewModel = MenuViewModel(
-            fakeRepository,
-            fakePersistedSlotRepository
-        )
+        val viewModel = createNewViewModel()
 
         navigateToEpisodeDetailDownload(viewModel)
 
         // EpisodeDetail
         click(viewModel) // DOWNLOAD
 
+        advanceUntilIdle() // wait for download to complete
+
         val state = viewModel.menuState.value as MenuState.Download
         assertEquals(1, state.slots.size)
     }
 
+    @Test
+    fun `already downloaded episode shows correct action`() = runTest {
+
+        val viewModel = createNewViewModel()
+
+        navigateToEpisodeDetailDownload(viewModel)
+
+        // Download first, should take back to Downloads menu
+        click(viewModel)
+        assertTrue(viewModel.menuState.value is MenuState.Download)
+
+        viewModel.moveSelection(1) // Move to 'Add New'
+
+        navigateToEpisodeDetailDownloaded(viewModel)
+
+        assertTrue(viewModel.menuState.value is MenuState.EpisodeDetail)
+
+        val state = viewModel.menuState.value as MenuState.EpisodeDetail
+        assertTrue(state.actionRows.firstOrNull { it is ActionRow.AlreadyDownloaded } != null)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `cancel download returns to non-downloading state`() = runTest {
+        val viewModel = createNewViewModel(hangingDownloader)
+
+        navigateToEpisodeDetailDownload(viewModel)
+
+        viewModel.confirmSelection() // start download
+        advanceUntilIdle()
+
+        viewModel.confirmSelection() // should be on "Cancel" row now
+        advanceUntilIdle()
+
+        val state = viewModel.menuState.value as MenuState.EpisodeDetail
+
+        assertFalse(state.isDownloading)
+        assertTrue(state.actionRows.first() is ActionRow.Download)
+    }
+
+    @Test
+    fun `cancel download does not add slot`() = runTest {
+        val viewModel = createNewViewModel(hangingDownloader)
+
+        navigateToEpisodeDetailDownload(viewModel)
+
+        viewModel.confirmSelection() // start
+        advanceUntilIdle()
+
+        viewModel.confirmSelection() // cancel
+        advanceUntilIdle()
+
+        assertTrue(fakePersistedSlotRepository.loadSlots().isEmpty())
+    }
+
+    @Test
+    fun `progress updates downloading row`() = runTest {
+        val progressFakeDownloader = ProgressFakeDownloader()
+        val viewModel = createNewViewModel(progressFakeDownloader)
+
+        navigateToEpisodeDetailDownload(viewModel)
+
+        viewModel.confirmSelection()
+        advanceUntilIdle()
+
+        progressFakeDownloader.progressCallback(0.5f)
+
+        val state = viewModel.menuState.value as MenuState.EpisodeDetail
+        val downloadingRow = state.actionRows.first() as ActionRow.Downloading
+
+        assertEquals(0.5f, downloadingRow.progress)
+    }
+
+    @Test
+    fun `failed download does not add slot`() = runTest {
+       val viewModel = createNewViewModel(failingDownloader)
+
+        navigateToEpisodeDetailDownload(viewModel)
+
+        viewModel.confirmSelection()
+        advanceUntilIdle()
+
+        assertTrue(fakePersistedSlotRepository.loadSlots().isEmpty())
+    }
+
     @Test
     fun `delete action removes slot`() = runTest {
 
-        val viewModel = MenuViewModel(
-            fakeRepository,
-            fakePersistedSlotRepository
-        )
+        val viewModel = createNewViewModel()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -195,32 +337,25 @@ class MenuViewModelTest() {
         assertEquals(0, state.slots.size)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun `already downloaded episode shows disabled action`() = runTest {
+    fun `delete calls storage deleteFile`() = runTest {
 
-        val viewModel = MenuViewModel(
-            fakeRepository,
-            fakePersistedSlotRepository
-        )
+        val viewModel = createNewViewModel()
 
         navigateToEpisodeDetailDownload(viewModel)
 
-        // Download first, should take back to Downloads menu
+        // Download
         click(viewModel)
-        assertTrue(viewModel.menuState.value is MenuState.Download)
 
-        viewModel.moveSelection(1) // Move to 'Add New'
+        // Open downloaded slot
+        click(viewModel)
 
-        navigateToEpisodeDetailDownloaded(viewModel)
+        // Delete
+        click(viewModel)
 
-        assertTrue(viewModel.menuState.value is MenuState.EpisodeDetail)
-
-        val state = viewModel.menuState.value as MenuState.EpisodeDetail
-        assertFalse(state.actionRows.firstOrNull { it.label == "Already Downloaded" }?.enabled ?: true)
+        assertNotNull(fakeFileStorage.deletedFileName)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `restoreSlots restores valid persisted slot`() = runTest {
 
@@ -235,10 +370,7 @@ class MenuViewModelTest() {
             )
         )
 
-        val viewModel = MenuViewModel(
-            fakeRepository,
-            fakePersistedSlotRepository
-        )
+        val viewModel = createNewViewModel()
 
         advanceUntilIdle()
 
@@ -253,33 +385,13 @@ class MenuViewModelTest() {
     //--------------
     // Helper functions to set up specific menu states
     //--------------
-    private fun createViewModelWithMenuState(
-        state: MenuState //unused for now
-    ): MenuViewModel {
-        when(state) {
-            is MenuState.Feeds -> {
-                val viewModel = MenuViewModel(fakeRepository, fakePersistedSlotRepository)
-                runTest {
-                    navigateToFeedsMenu(viewModel)
-                }
-                return viewModel
-            }
-
-            is MenuState.EpisodeDetail -> {
-                val viewModel = MenuViewModel(fakeRepository, fakePersistedSlotRepository)
-                runTest {
-                    navigateToFeedsMenu(viewModel)
-                    navigateToEpisodeDetailDownload(viewModel)
-                }
-                return viewModel
-            }
-            else -> {
-                //default state is Home
-                return MenuViewModel(fakeRepository, fakePersistedSlotRepository)
-            }
-        }
-
-    }
+    private fun createNewViewModel(
+        downloader: Downloader = successFakeDownloader): MenuViewModel = MenuViewModel(
+            podcastRepository = fakeRepository,
+            slotRepository = fakePersistedSlotRepository,
+            downloader = downloader,
+            storage = fakeFileStorage
+        )
 
     private fun TestScope.navigateToFeedsMenu(
         viewModel: MenuViewModel
@@ -302,7 +414,8 @@ class MenuViewModelTest() {
         click(viewModel)
 
         //Episodes -> Episode Detail
-        click(viewModel)    }
+        click(viewModel)
+    }
 
     private fun TestScope.navigateToEpisodeDetailDownloaded(
         viewModel: MenuViewModel
@@ -320,12 +433,13 @@ class MenuViewModelTest() {
         click(viewModel)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun TestScope.click(viewModel: MenuViewModel) {
         viewModel.confirmSelection()
         advanceUntilIdle()
+        println("click menuState result: ${viewModel.menuState.value}")
     }
 
 }
-
 
 

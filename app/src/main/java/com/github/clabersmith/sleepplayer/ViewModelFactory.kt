@@ -3,8 +3,6 @@ package com.github.clabersmith.sleepplayer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuViewModel
-import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
-import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 
 class ViewModelFactory(
     private val container: AppContainer
@@ -16,7 +14,7 @@ class ViewModelFactory(
             @Suppress("UNCHECKED_CAST")
             return MenuViewModel(
                 podcastRepository = container.podcastRepository,
-                persistedSlotRepository = container.persistedSlotRepository,
+                slotRepository = container.persistedSlotRepository,
                 downloader = container.downloader,
                 storage = container.storage) as T
         }
