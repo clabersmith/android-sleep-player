@@ -45,6 +45,11 @@ fun ClickWheel(
     onConfirm: () -> Unit,
     onMenuShortPress: () -> Unit,
     onMenuLongPress: () -> Unit,
+    onPlayPausePress: () -> Unit,
+    onScanForwardDown: () -> Unit,
+    onScanForwardUp: () -> Unit,
+    onScanBackDown: () -> Unit,
+    onScanBackUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -53,7 +58,8 @@ fun ClickWheel(
         val baseSize = 240.dp
 
         val scale = (minOf(maxWidth, maxHeight) / baseSize)
-            .coerceAtMost(1.2f)
+            .coerceAtMost(1.3f)
+
 
         val wheelSize = baseSize * scale
 
@@ -111,7 +117,7 @@ fun ClickWheel(
                     }
             )
 
-            // ----- PREVIOUS -----
+            // ----- Back -----
             Text(
                 text = "⏮",
                 color = textColor,
@@ -121,9 +127,20 @@ fun ClickWheel(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 20.dp * scale)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                onScanBackDown()
+
+                                tryAwaitRelease()
+
+                                onScanBackUp()
+                            }
+                        )
+                    }
             )
 
-            // ----- NEXT -----
+            // ----- FORWARD -----
             Text(
                 text = "⏭",
                 color = textColor,
@@ -133,6 +150,17 @@ fun ClickWheel(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 20.dp * scale)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                onScanForwardDown()
+
+                                tryAwaitRelease()
+
+                                onScanForwardUp()
+                            }
+                        )
+                    }
             )
 
             // ----- PLAY/PAUSE (visual only for now) -----
@@ -141,6 +169,13 @@ fun ClickWheel(
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 18.dp * scale)
                     .size(28.dp * .8f * scale)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                onPlayPausePress()
+                            }
+                        )
+                    }
             ) {
                 val w = size.width
                 val h = size.height

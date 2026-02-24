@@ -2,11 +2,14 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
+import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.DOWNLOAD
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.EPISODES
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.*
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
@@ -17,21 +20,50 @@ import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.Po
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.DownloadConstants.MAX_SLOT_SIZE
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 
+/**
+ * ViewModel that drives the iPod-style menu and playback UI.
+ *
+ * Responsibilities:
+ * - Maintains UI state as [MenuState] in [_menuState] and exposes it via [menuState].
+ * - Loads and caches podcast feeds, categories and persisted download slots.
+ * - Builds concrete menu screens (downloads, categories, feeds, episodes, episode detail,
+ *   play list and now-playing) requested by the menu model via [MenuActions].
+ * - Handles click-wheel interactions: selection movement, scan left/right (fast seek),
+ *   play/pause and confirm/menus (navigation).
+ * - Manages episode downloads: starts/cancels downloads, reports progress, persists slots,
+ *   and deletes downloaded files.
+ * - Manages audio playback: loading local files, play/pause toggling, periodic progress
+ *   updates and resource cleanup on [onCleared].
+ *
+ * Concurrency and lifecycle:
+ * - Uses [viewModelScope] for background tasks and keeps references to active jobs
+ *   (downloadJob, scanJob, playProgressJob) which are cancelled appropriately.
+ *
+ * Constructor parameters:
+ * @param podcastRepository Repository used to load feeds and categories.
+ * @param slotRepository Repository used to persist/load download slot information.
+ * @param downloader Component responsible for downloading episode audio files.
+ * @param storage File storage helper for file existence, deletion and path resolution.
+ * @param player Audio player used to play and seek local audio files.
+ */
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val slotRepository: SlotRepository,
     private val downloader: Downloader,
-    private val storage: FileStorage
+    private val storage: FileStorage,
+    private val player: AudioPlayer
 ) : ViewModel(), MenuActions {
 
-    private val _menuState = MutableStateFlow<MenuState>(MenuState.Home())
+    private val _menuState = MutableStateFlow<MenuState>(Home())
     val menuState: StateFlow<MenuState> = _menuState
 
     private val _feeds = MutableStateFlow<List<PodcastFeed>>(emptyList())
@@ -39,7 +71,10 @@ class MenuViewModel(
     private val _slots = MutableStateFlow<List<SlotState>>(emptyList())
 
     private var downloadJob: Job? = null
-    private var currentDownloadFileName: String? = null
+    private var scanJob: Job? = null
+
+    private var playProgressJob: Job? = null
+    private var wasPlayingBeforeScan = false
 
     init {
         load()
@@ -67,6 +102,104 @@ class MenuViewModel(
     }
 
     // -----------------------------
+    // Click Wheel Scan Left/Right
+    // -----------------------------
+
+    fun onScanForwardDown() {
+        _menuState.update { it.onScanForwardDown(actions = this) }
+    }
+
+    fun onScanForwardUp() {
+        _menuState.update { it.onScanForwardUp(actions = this) }
+    }
+
+    fun onScanBackDown() {
+        _menuState.update { it.onScanBackDown(actions = this) }
+    }
+
+    fun onScanBackUp() {
+        _menuState.update { it.onScanBackUp(actions = this) }
+    }
+
+    override fun startScanForward() {
+        if (scanJob != null) return
+
+        wasPlayingBeforeScan = player.isPlaying()
+        player.pause()
+
+        scanJob = viewModelScope.launch {
+            val startTime = System.currentTimeMillis()
+
+            while (isActive) {
+                val elapsed = System.currentTimeMillis() - startTime
+
+                val delta = computeScanDelta(elapsed)
+
+                val current = player.currentPosition()
+                val duration = player.duration()
+
+                val newPosition = (current + delta)
+                    .coerceAtMost(duration)
+
+                player.seekTo(newPosition)
+
+                delay(150)
+            }
+        }
+    }
+
+    override fun startScanBack() {
+        if (scanJob != null) return
+
+        wasPlayingBeforeScan = player.isPlaying()
+        player.pause()
+
+        scanJob = viewModelScope.launch {
+            val startTime = System.currentTimeMillis()
+
+            while (isActive) {
+                val elapsedMs = System.currentTimeMillis() - startTime
+
+                val delta = computeScanDelta(elapsedMs)
+
+                val current = player.currentPosition()
+
+                val newPosition = (current - delta)
+                    .coerceAtLeast(0)
+
+                player.seekTo(newPosition)
+
+                delay(150)
+            }
+        }
+    }
+
+    override fun stopScan() {
+        scanJob?.cancel()
+        scanJob = null
+
+        if (wasPlayingBeforeScan) {
+            player.play()
+        }
+    }
+
+    private fun computeScanDelta(elapsed: Long): Long {
+        val minDelta = 1_000.0
+        val maxDelta = 45_000.0
+        val seconds = (elapsed / 1000.0).coerceAtLeast(0.0)
+        val growthRate = 0.6 // increase to accelerate growth, decrease to slow it
+        val raw = minDelta * kotlin.math.exp(seconds * growthRate)
+        return raw.coerceIn(minDelta, maxDelta).toLong()
+    }
+
+    //------------------------------
+    // Click Wheel Play/Pause
+    //------------------------------
+    fun onPlayPausePressed() {
+        _menuState.update { it.onPlayPause(actions = this) }
+    }
+
+    // -----------------------------
     // Click Wheel Center Button
     // -----------------------------
     fun confirmSelection() {
@@ -74,27 +207,27 @@ class MenuViewModel(
         _menuState.value = current.onConfirm(actions = this)
     }
 
-    override fun buildDownloadState(): MenuState.Download {
+    override fun buildDownloadState(): Download {
         println("Building Download State with slots: ${_slots.value}")
-        return MenuState.Download(
+        return Download(
             slots = _slots.value,
             maxSlots = MAX_SLOT_SIZE,
             selectedIndex = 0
         )
     }
 
-    override fun buildCategoriesState(): MenuState.Categories {
-        return MenuState.Categories(
+    override fun buildCategoriesState(): Categories {
+        return Categories(
             categories = _categories.value.sorted(),
             selectedIndex = 0
         )
     }
 
-    override fun buildFeedsState(category: String): MenuState.Feeds {
+    override fun buildFeedsState(category: String): Feeds {
         val feeds = _feeds.value
             .filter { it.category == category }
 
-        return MenuState.Feeds(
+        return Feeds(
             feeds = feeds,
             categoryName = category,
             selectedIndex = 0
@@ -104,15 +237,61 @@ class MenuViewModel(
     override fun buildEpisodesState(
         feedIndex: Int,
         categoryName: String
-    ): MenuState.Episodes {
+    ): Episodes {
 
         val feed = _feeds.value[feedIndex]
 
-        return MenuState.Episodes(
+        return Episodes(
             episodes = feed.episodes,
             feedIndex = feedIndex,
             categoryName = categoryName,
             selectedIndex = 0
+        )
+    }
+
+    override fun buildEpisodeDetailState(
+        feedIndex: Int,
+        episodeIndex: Int,
+        episode: PodcastEpisode,
+        origin: Origin
+    ): EpisodeDetail {
+
+        val alreadyDownloaded = _slots.value.any {
+            it.feedIndex == feedIndex &&
+                    it.episodeIndex == episodeIndex
+        }
+
+        val primaryAction = when {
+            origin == DOWNLOAD -> ActionRow.Delete
+
+            origin == EPISODES &&
+                    alreadyDownloaded -> ActionRow.AlreadyDownloaded
+
+            else -> ActionRow.Download
+        }
+
+        return EpisodeDetail(
+            feedIndex = feedIndex,
+            episodeIndex = episodeIndex,
+            episode = episode,
+            actionRows = listOf(primaryAction),
+            origin = origin
+        )
+    }
+
+    override fun buildPlayState(): Play {
+        return Play(
+            slots = _slots.value,
+            selectedIndex = 0
+        )
+    }
+
+    override fun buildNowPlayingState(slot: SlotState): NowPlaying {
+        return NowPlaying(
+            slot = slot,
+            durationMs = 0L,
+            positionMs = 0L,
+            isPlaying = false
         )
     }
 
@@ -121,7 +300,7 @@ class MenuViewModel(
     }
 
 
-    override fun startDownload(state: MenuState.EpisodeDetail) {
+    override fun startDownload(state: EpisodeDetail) {
         if (state.isDownloading) return
 
         downloadJob?.cancel()
@@ -158,7 +337,7 @@ class MenuViewModel(
     }
 
     private suspend fun downloadEpisode(
-        state: MenuState.EpisodeDetail
+        state: EpisodeDetail
     ): DownloadResult {
 
         val feed = _feeds.value.getOrNull(state.feedIndex)
@@ -178,10 +357,11 @@ class MenuViewModel(
             )
 
             addSlot(
-                state.feedIndex,
-                state.episodeIndex,
-                episode,
-                file.name
+                feedIndex = state.feedIndex,
+                feedName = feed.title,
+                episodeIndex = state.episodeIndex,
+                episode = episode,
+                fileName = file.name
             )
 
             DownloadResult.Success(file.name)
@@ -196,7 +376,7 @@ class MenuViewModel(
 
     fun updateDownloadProgress(progress: Float) {
         _menuState.update { current ->
-            if (current is MenuState.EpisodeDetail && current.isDownloading) {
+            if (current is EpisodeDetail && current.isDownloading) {
                 current.copy(
                     actionRows = listOf(
                         ActionRow.Downloading(progress),
@@ -207,12 +387,12 @@ class MenuViewModel(
         }
     }
 
-    override fun cancelDownload(state: MenuState.EpisodeDetail) {
+    override fun cancelDownload(state: EpisodeDetail) {
         downloadJob?.cancel()
         restoreEpisodeDetail(state)
     }
 
-    override fun deleteEpisode(state: MenuState.EpisodeDetail) {
+    override fun deleteEpisode(state: EpisodeDetail) {
         val slot = _slots.value.find {
             it.feedIndex == state.feedIndex &&
                     it.episodeIndex == state.episodeIndex
@@ -232,77 +412,61 @@ class MenuViewModel(
     }
 
     fun onMenuLongPress() {
-        _menuState.value = MenuState.Home()
+        _menuState.value = Home()
+    }
+
+    override fun stopPlayback() {
+        player.stop()
     }
 
     fun goUp(): MenuState {
         return when (val state = _menuState.value) {
 
-            is MenuState.Home -> state
+            is Home -> state
 
-            is MenuState.Download -> MenuState.Home()
+            is Download -> Home()
 
-            is MenuState.Categories -> MenuState.Home()
+            is Categories -> Home()
 
-            is MenuState.Feeds -> MenuState.Categories(
+            is Feeds -> Categories(
                 categories = sortedCategories()
             )
 
-            is MenuState.Episodes ->
-                MenuState.Feeds(
+            is Episodes ->
+                Feeds(
                     categoryName = state.categoryName ?: "",
                     feeds = filteredFeeds(state.categoryName)
                 )
 
-            is MenuState.EpisodeDetail -> {
+            is EpisodeDetail -> {
 
                 when (state.origin) {
 
                     DOWNLOAD ->
-                        MenuState.Download(
+                        Download(
                             slots = _slots.value,
                             maxSlots = MAX_SLOT_SIZE
                         )
 
                     EPISODES ->
-                        MenuState.Episodes(
+                        Episodes(
                             feedIndex = state.feedIndex,
                             episodes = _feeds.value[state.feedIndex].episodes,
                             categoryName = _feeds.value[state.feedIndex].category
                         )
                 }
             }
+
+            is Play -> Home(selectedIndex = 1)
+
+            is NowPlaying -> {
+                stopPlayback()
+                Play(
+                    slots = _slots.value,
+                    selectedIndex = 0
+                )
+            }
         }
-    }
-
-    override fun buildEpisodeDetailState(
-        feedIndex: Int,
-        episodeIndex: Int,
-        episode: PodcastEpisode,
-        origin: Origin
-    ): MenuState.EpisodeDetail {
-
-        val alreadyDownloaded = _slots.value.any {
-            it.feedIndex == feedIndex &&
-                    it.episodeIndex == episodeIndex
-        }
-
-        val primaryAction = when {
-            origin == DOWNLOAD -> ActionRow.Delete
-
-            origin == EPISODES &&
-                    alreadyDownloaded -> ActionRow.AlreadyDownloaded
-
-            else -> ActionRow.Download
-        }
-
-        return MenuState.EpisodeDetail(
-            feedIndex = feedIndex,
-            episodeIndex = episodeIndex,
-            episode = episode,
-            actionRows = listOf(primaryAction),
-            origin = origin
-        )
     }
 
     // -----------------------------
@@ -336,9 +500,10 @@ class MenuViewModel(
     // -----------------------------
     // Download Slot Management
     // -----------------------------
-    private fun addSlot(feedIndex: Int, episodeIndex: Int, episode: PodcastEpisode, fileName: String) {
+    private fun addSlot(feedIndex: Int, episodeIndex: Int, feedName: String, episode: PodcastEpisode, fileName: String) {
         val newSlot = SlotState(
             feedIndex = feedIndex,
+            feedName = feedName,
             episodeIndex = episodeIndex,
             loadedEpisode = episode,
             fileName = fileName
@@ -383,6 +548,7 @@ class MenuViewModel(
 
                 SlotState(
                     feedIndex = p.feedIndex,
+                    feedName = p.feedName,
                     episodeIndex = p.episodeIndex,
                     loadedEpisode = episode,
                     fileName = p.fileName
@@ -406,7 +572,7 @@ class MenuViewModel(
     }
 
     private fun restoreEpisodeDetail(
-        previous: MenuState.EpisodeDetail
+        previous: EpisodeDetail
     ) {
         val alreadyDownloaded = _slots.value.any {
             it.feedIndex == previous.feedIndex &&
@@ -422,6 +588,65 @@ class MenuViewModel(
             selectedIndex = 0
         )
     }
+
+    //----------------
+    // Audio Helpers
+    //----------------
+    override fun startPlayback(slot: SlotState): MenuState {
+
+        val filePath = storage.getFilePath(slot.fileName)
+
+        viewModelScope.launch {
+            player.load(AudioSource(filePath))
+            player.play()
+            startPlayProgressUpdates()
+        }
+
+        return NowPlaying(
+            slot = slot,
+            durationMs = 0L, // will update after load
+            positionMs = 0L,
+            isPlaying = true
+        )
+    }
+
+    override fun togglePlayPause(state: NowPlaying): MenuState {
+
+        if (player.isPlaying()) {
+            player.pause()
+            return state.copy(isPlaying = false)
+        } else {
+            player.play()
+            return state.copy(isPlaying = true)
+        }
+    }
+
+    private fun startPlayProgressUpdates() {
+        playProgressJob?.cancel()
+
+        playProgressJob = viewModelScope.launch {
+            while (isActive) {
+                delay(500)
+
+                val currentState = _menuState.value
+                if (currentState is NowPlaying) {
+
+                    _menuState.value = currentState.copy(
+                        positionMs = player.currentPosition(),
+                        durationMs = player.duration(),
+                        isPlaying = player.isPlaying()
+                    )
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        playProgressJob?.cancel()
+        scanJob?.cancel()
+        player.release()
+    }
 }
 
 interface MenuActions {
@@ -433,15 +658,26 @@ interface MenuActions {
         feedIndex: Int,
         episodeIndex: Int,
         episode: PodcastEpisode,
-        origin: MenuState.EpisodeDetail.Origin
+        origin: Origin
     ): MenuState
+
+    fun buildPlayState(): MenuState
+
+    fun buildNowPlayingState(slot: SlotState): NowPlaying
 
     fun feedIndexOf(feed: PodcastFeed): Int
 
     // Side-effect actions
-    fun startDownload(state: MenuState.EpisodeDetail)
-    fun cancelDownload(state: MenuState.EpisodeDetail)
-    fun deleteEpisode(state: MenuState.EpisodeDetail)
+    fun startDownload(state: EpisodeDetail)
+    fun cancelDownload(state: EpisodeDetail)
+    fun deleteEpisode(state: EpisodeDetail)
+    fun startPlayback(slot: SlotState): MenuState
+    fun togglePlayPause(state: NowPlaying): MenuState
+    fun stopPlayback()
+    fun startScanForward()
+    fun startScanBack()
+    fun stopScan()
+
 }
 
 sealed class DownloadResult {

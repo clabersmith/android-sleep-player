@@ -7,5 +7,6 @@ data class PodcastEpisode(
     val audioUrl: String,
     val durationSec: Int? = null,
     val published: String? = null,
-    val fileName: String? = null
+    val fileName: String? = null,
+    val feedName: String? = null,
 )

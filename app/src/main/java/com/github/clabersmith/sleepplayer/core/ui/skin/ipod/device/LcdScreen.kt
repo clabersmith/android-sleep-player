@@ -17,6 +17,8 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.EpisodeDetailMe
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.EpisodeMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.FeedMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.HomeMenu
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.NowPlayingMenu
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PlayMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import kotlin.math.min
 
@@ -34,7 +36,7 @@ fun LcdScreen(
 
         val scaleX = maxWidth / baseWidth
         val scaleY = maxHeight / baseHeight
-        val scale = min(scaleX, scaleY).coerceAtMost(1.25f)
+        val scale = min(scaleX, scaleY).coerceAtMost(1.4f)
 
         LcdSurface(
             modifier = Modifier.size(
@@ -46,8 +48,8 @@ fun LcdScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
 
-                // 🔥 Dynamic header
-                Header(title = menuState.title())
+                // Dynamic header
+                Header(menuState = menuState)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -61,19 +63,10 @@ fun LcdScreen(
                     is MenuState.EpisodeDetail -> {
                         EpisodeDetailMenu(menuState)
                     }
+                    is MenuState.Play -> PlayMenu(menuState)
+                    is MenuState.NowPlaying -> NowPlayingMenu(menuState)
                 }
             }
         }
-    }
-}
-
-private fun MenuState.title(): String {
-    return when (this) {
-        is MenuState.Home -> "SleepPod"
-        is MenuState.Download -> "Downloaded"
-        is MenuState.Categories -> "Categories"
-        is MenuState.Feeds -> categoryName ?: "Feeds"
-        is MenuState.Episodes -> "Episodes"
-        is MenuState.EpisodeDetail -> "Episode"
     }
 }

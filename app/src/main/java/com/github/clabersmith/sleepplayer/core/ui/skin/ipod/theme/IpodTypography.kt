@@ -13,7 +13,7 @@ val IpodFontFamily = FontFamily(
 
 val IpodMenuText = TextStyle(
     fontFamily = IpodFontFamily,
-    fontSize = 14.sp,
+    fontSize = 16.sp,
     fontWeight = FontWeight.SemiBold,
     color = IpodTextPrimary
 )

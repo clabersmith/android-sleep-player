@@ -6,4 +6,5 @@ interface FileStorage {
     fun createFile(fileName: String): File
     fun fileExists(fileName: String?): Boolean
     fun deleteFile(fileName: String?): Boolean
+    fun getFilePath(fileName: String): String
 }

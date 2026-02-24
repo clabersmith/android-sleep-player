@@ -4,7 +4,7 @@ import android.content.Context
 import java.io.File
 
 class AudioFileStorage(
-    private val context: Context
+    context: Context
 ) : FileStorage {
 
     private val audioDirectory =
@@ -30,5 +30,9 @@ class AudioFileStorage(
         } else {
             false
         }
+    }
+
+    override fun getFilePath(fileName: String): String {
+        return File(audioDirectory, fileName).absolutePath
     }
 }

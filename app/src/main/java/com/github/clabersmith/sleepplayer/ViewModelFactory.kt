@@ -16,7 +16,8 @@ class ViewModelFactory(
                 podcastRepository = container.podcastRepository,
                 slotRepository = container.persistedSlotRepository,
                 downloader = container.downloader,
-                storage = container.storage) as T
+                storage = container.storage,
+                player = container.audioPlayer) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

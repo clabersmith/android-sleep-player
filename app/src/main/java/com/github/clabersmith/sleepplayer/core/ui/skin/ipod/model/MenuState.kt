@@ -1,7 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuActions
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuViewModel
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 
@@ -10,9 +9,17 @@ sealed class MenuState() {
     abstract val selectedIndex: Int
     abstract val itemCount: Int
 
+    abstract val title: String
+
     abstract fun copyWithIndex(newIndex: Int): MenuState
 
     abstract fun onConfirm(actions: MenuActions): MenuState
+
+    open fun onPlayPause(actions: MenuActions): MenuState = this
+    open fun onScanForwardDown(actions: MenuActions) = this
+    open fun onScanForwardUp(actions: MenuActions) = this
+    open fun onScanBackDown(actions: MenuActions) = this
+    open fun onScanBackUp(actions: MenuActions) = this
 
     data class Home(
         override val selectedIndex: Int = 0
@@ -20,11 +27,16 @@ sealed class MenuState() {
 
         override val itemCount: Int get() = 4
 
+        override val title = "Home"
+
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
         override fun onConfirm(actions: MenuActions): MenuState {
             return when (selectedIndex) {
                 0 -> actions.buildDownloadState()
+
+                1 -> actions.buildPlayState()
+
                 else -> this
             }
         }
@@ -38,6 +50,8 @@ sealed class MenuState() {
 
         override val itemCount: Int
             get() = slots.size + if (slots.size < maxSlots) 1 else 0
+
+        override val title = "Downloaded"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
@@ -71,6 +85,8 @@ sealed class MenuState() {
 
         override val itemCount: Int get() = categories.size
 
+        override val title = "Categories"
+
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
         override fun onConfirm(actions: MenuActions): MenuState {
@@ -86,6 +102,8 @@ sealed class MenuState() {
     ) : MenuState() {
 
         override val itemCount: Int get() = feeds.size
+
+        override val title = categoryName
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
@@ -104,6 +122,8 @@ sealed class MenuState() {
     ) : MenuState() {
 
         override val itemCount: Int get() = episodes.size
+
+        override val title = "Episodes"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
@@ -128,6 +148,8 @@ sealed class MenuState() {
         override val selectedIndex: Int = 0
     ) : MenuState() {
         override val itemCount: Int get() = actionRows.size
+
+        override val title = "Episode"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
@@ -170,5 +192,65 @@ sealed class MenuState() {
             DOWNLOAD
         }
     }
-}
 
+    data class Play(
+        val slots: List<SlotState>,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+        override val itemCount: Int get() = slots.size
+
+        override val title = "Play"
+
+        override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun onConfirm(actions: MenuActions): MenuState {
+            val slot = slots[selectedIndex]
+            return actions.startPlayback(slot)
+        }
+    }
+
+    data class NowPlaying(
+        val slot: SlotState,
+        val durationMs: Long,
+        val positionMs: Long,
+        val isPlaying: Boolean,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+        override val itemCount: Int
+            get() = TODO("Not yet implemented")
+
+        override val title = "Now Playing"
+
+        override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun onConfirm(actions: MenuActions): MenuState {
+            return this //no op
+        }
+
+        override fun onPlayPause(actions: MenuActions): MenuState {
+            actions.togglePlayPause(this)
+            return this
+        }
+
+        override fun onScanForwardDown(actions: MenuActions): MenuState {
+            actions.startScanForward()
+            return this
+        }
+
+        override fun onScanForwardUp(actions: MenuActions): MenuState {
+            actions.stopScan()
+            return this
+        }
+
+        override fun onScanBackDown(actions: MenuActions): MenuState {
+            actions.startScanBack()
+            return this
+        }
+
+        override fun onScanBackUp(actions: MenuActions): MenuState {
+            actions.stopScan()
+            return this
+        }
+    }
+
+}

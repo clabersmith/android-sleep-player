@@ -100,7 +100,29 @@ fun IpodScreen(
             onMenuShortPress = {
                 viewModel.onMenuShortPress()
                 playClick()
-             }
+            },
+            onPlayPausePress = {
+                viewModel.onPlayPausePressed()
+                playClick()
+            },
+            onScanForwardDown = {
+                println("TEST 1: Scan forward down")
+                viewModel.onScanForwardDown()
+                playClick()
+            },
+            onScanForwardUp = {
+                println("TEST 1: Scan forward up")
+                viewModel.onScanForwardUp()
+                playClick()
+            },
+            onScanBackDown = {
+                viewModel.onScanBackDown()
+                playClick()
+            },
+            onScanBackUp = {
+                viewModel.onScanBackUp()
+                playClick()
+            }
         )
 
         Spacer(Modifier.height(32.dp))

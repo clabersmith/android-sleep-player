@@ -1,5 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
+import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
+import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
@@ -132,6 +134,28 @@ class MenuViewModelTest() {
             deletedFileName = fileName
             return true
         }
+
+        override fun getFilePath(fileName: String): String {
+            return "dummy/${fileName}"
+        }
+    }
+
+    class FakePodcastPlayer : AudioPlayer {
+
+        var playing = false
+        var position = 0L
+        var duration = 60_000L
+
+        override suspend fun load(audioSource: AudioSource) { }
+
+        override fun play() { playing = true }
+        override fun pause() { playing = false }
+        override fun seekTo(positionMs: Long) { position = positionMs }
+
+        override fun currentPosition() = position
+        override fun duration() = duration
+        override fun isPlaying() = playing
+        override fun release() {}
     }
 
     private val fakeFileStorage : FakeFileStorage = FakeFileStorage()
@@ -363,6 +387,7 @@ class MenuViewModelTest() {
             listOf(
                 PersistedSlot(
                     feedIndex = 0,
+                    feedName = "Test Podcast 1",
                     episodeIndex = 1,
                     episodeId = "ep1",
                     fileName = ""
@@ -390,7 +415,8 @@ class MenuViewModelTest() {
             podcastRepository = fakeRepository,
             slotRepository = fakePersistedSlotRepository,
             downloader = downloader,
-            storage = fakeFileStorage
+            storage = fakeFileStorage,
+            player = FakePodcastPlayer()
         )
 
     private fun TestScope.navigateToFeedsMenu(
