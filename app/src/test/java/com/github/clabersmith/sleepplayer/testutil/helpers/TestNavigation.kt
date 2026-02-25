@@ -48,6 +48,7 @@ fun TestScope.navigateToEpisodeDetailDownloaded(
     click(viewModel)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 fun TestScope.navigateToNowPlaying(
     viewModel: MenuViewModel
 ) {

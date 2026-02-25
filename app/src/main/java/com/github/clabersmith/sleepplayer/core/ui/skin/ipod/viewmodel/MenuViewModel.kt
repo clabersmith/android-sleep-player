@@ -56,7 +56,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * @param downloader Component responsible for downloading episode audio files.
  * @param storage File storage helper for file existence, deletion and path resolution.
  * @param player Audio player used to play and seek local audio files.
- * @param playbackDispatcher Coroutine dispatcher for playback-related tasks (default: [Dispatchers.Default]).
+ * @param playbackDispatcher Coroutine dispatcher for playback-related tasks
  */
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
@@ -64,7 +64,7 @@ class MenuViewModel(
     private val downloader: Downloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
-    private val playbackDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val playbackDispatcher: CoroutineDispatcher
 ) : ViewModel(), MenuActions {
 
     private val _menuState = MutableStateFlow<MenuState>(Home())
