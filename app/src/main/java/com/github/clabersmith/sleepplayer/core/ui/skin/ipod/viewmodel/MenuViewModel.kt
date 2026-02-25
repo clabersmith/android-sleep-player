@@ -19,6 +19,8 @@ import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.Podcast
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.DownloadConstants.MAX_SLOT_SIZE
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,13 +56,15 @@ import kotlin.coroutines.cancellation.CancellationException
  * @param downloader Component responsible for downloading episode audio files.
  * @param storage File storage helper for file existence, deletion and path resolution.
  * @param player Audio player used to play and seek local audio files.
+ * @param playbackDispatcher Coroutine dispatcher for playback-related tasks (default: [Dispatchers.Default]).
  */
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val slotRepository: SlotRepository,
     private val downloader: Downloader,
     private val storage: FileStorage,
-    private val player: AudioPlayer
+    private val player: AudioPlayer,
+    private val playbackDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel(), MenuActions {
 
     private val _menuState = MutableStateFlow<MenuState>(Home())
@@ -89,6 +93,15 @@ class MenuViewModel(
         }
     }
 
+    private fun setState(newState: MenuState) {
+        _menuState.value = newState
+
+        if (newState is NowPlaying) {
+            startObservingPlaybackProgress()
+        } else {
+            stopObservingPlaybackProgress()
+        }
+    }
 
     // -----------------------------
     // Click Wheel Movement
@@ -96,9 +109,8 @@ class MenuViewModel(
     fun moveSelection(delta: Int) {
         val state = _menuState.value
 
-        _menuState.value = state.copyWithIndex(
-            nextIndex(state.selectedIndex, delta, state.itemCount)
-        )
+        setState(state.copyWithIndex(
+            nextIndex(state.selectedIndex, delta, state.itemCount)))
     }
 
     // -----------------------------
@@ -204,11 +216,10 @@ class MenuViewModel(
     // -----------------------------
     fun confirmSelection() {
         val current = _menuState.value
-        _menuState.value = current.onConfirm(actions = this)
+        setState(current.onConfirm(actions = this))
     }
 
     override fun buildDownloadState(): Download {
-        println("Building Download State with slots: ${_slots.value}")
         return Download(
             slots = _slots.value,
             maxSlots = MAX_SLOT_SIZE,
@@ -309,27 +320,25 @@ class MenuViewModel(
 
             val result = downloadEpisode(state)
 
-            println("Download result: $result")
-
             when (result) {
                 is DownloadResult.Success -> {
-                    _menuState.value = buildDownloadState()
+                    setState(buildDownloadState())
                 }
 
                 is DownloadResult.Cancelled -> {
                     // Return to non-downloading episode detail
-                    _menuState.value = state.copy(
+                    setState(state.copy(
                         isDownloading = false,
                         actionRows = listOf(ActionRow.Download),
-                        selectedIndex = 0
+                        selectedIndex = 0)
                     )
                 }
 
                 is DownloadResult.Error -> {
-                    _menuState.value = state.copy(
+                    setState(state.copy(
                         isDownloading = false,
                         actionRows = listOf(ActionRow.Download),
-                        selectedIndex = 0
+                        selectedIndex = 0)
                     )
                 }
             }
@@ -408,11 +417,11 @@ class MenuViewModel(
     // Menu Button (Click Wheel Back
     // -----------------------------
     fun onMenuShortPress() {
-        _menuState.value = goUp()
+        setState(goUp())
     }
 
     fun onMenuLongPress() {
-        _menuState.value = Home()
+        setState(Home())
     }
 
     override fun stopPlayback() {
@@ -579,13 +588,13 @@ class MenuViewModel(
                     it.episodeIndex == previous.episodeIndex
         }
 
-        _menuState.value = previous.copy(
+        setState(previous.copy(
             isDownloading = false,
             actionRows = when {
                 alreadyDownloaded -> listOf(ActionRow.AlreadyDownloaded)
                 else -> listOf(ActionRow.Download)
             },
-            selectedIndex = 0
+            selectedIndex = 0)
         )
     }
 
@@ -593,44 +602,30 @@ class MenuViewModel(
     // Audio Helpers
     //----------------
     override fun startPlayback(slot: SlotState): MenuState {
-
         val filePath = storage.getFilePath(slot.fileName)
 
         viewModelScope.launch {
             player.load(AudioSource(filePath))
             player.play()
-            startPlayProgressUpdates()
         }
 
         return NowPlaying(
             slot = slot,
-            durationMs = 0L, // will update after load
+            durationMs = 0L,
             positionMs = 0L,
             isPlaying = true
         )
     }
 
-    override fun togglePlayPause(state: NowPlaying): MenuState {
-
-        if (player.isPlaying()) {
-            player.pause()
-            return state.copy(isPlaying = false)
-        } else {
-            player.play()
-            return state.copy(isPlaying = true)
-        }
-    }
-
-    private fun startPlayProgressUpdates() {
+    private fun startObservingPlaybackProgress() {
         playProgressJob?.cancel()
 
-        playProgressJob = viewModelScope.launch {
+        playProgressJob = viewModelScope.launch(playbackDispatcher) {
             while (isActive) {
                 delay(500)
 
                 val currentState = _menuState.value
                 if (currentState is NowPlaying) {
-
                     _menuState.value = currentState.copy(
                         positionMs = player.currentPosition(),
                         durationMs = player.duration(),
@@ -638,6 +633,21 @@ class MenuViewModel(
                     )
                 }
             }
+        }
+    }
+
+    private fun stopObservingPlaybackProgress() {
+        playProgressJob?.cancel()
+        playProgressJob = null
+    }
+
+    override fun togglePlayPause(state: NowPlaying): MenuState {
+        if (player.isPlaying()) {
+            player.pause()
+            return state.copy(isPlaying = false)
+        } else {
+            player.play()
+            return state.copy(isPlaying = true)
         }
     }
 

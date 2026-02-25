@@ -106,12 +106,10 @@ fun IpodScreen(
                 playClick()
             },
             onScanForwardDown = {
-                println("TEST 1: Scan forward down")
                 viewModel.onScanForwardDown()
                 playClick()
             },
             onScanForwardUp = {
-                println("TEST 1: Scan forward up")
                 viewModel.onScanForwardUp()
                 playClick()
             },

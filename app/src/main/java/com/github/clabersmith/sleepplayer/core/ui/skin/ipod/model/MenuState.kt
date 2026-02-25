@@ -216,8 +216,7 @@ sealed class MenuState() {
         val isPlaying: Boolean,
         override val selectedIndex: Int = 0
     ) : MenuState() {
-        override val itemCount: Int
-            get() = TODO("Not yet implemented")
+        override val itemCount: Int = 1
 
         override val title = "Now Playing"
 
@@ -228,8 +227,7 @@ sealed class MenuState() {
         }
 
         override fun onPlayPause(actions: MenuActions): MenuState {
-            actions.togglePlayPause(this)
-            return this
+            return actions.togglePlayPause(this)
         }
 
         override fun onScanForwardDown(actions: MenuActions): MenuState {

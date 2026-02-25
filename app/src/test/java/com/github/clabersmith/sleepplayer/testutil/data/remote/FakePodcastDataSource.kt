@@ -1,4 +1,4 @@
-package com.github.clabersmith.sleepplayer.testutil
+package com.github.clabersmith.sleepplayer.testutil.data.remote
 
 import com.github.clabersmith.sleepplayer.features.podcasts.data.remote.PodcastDataSource
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode

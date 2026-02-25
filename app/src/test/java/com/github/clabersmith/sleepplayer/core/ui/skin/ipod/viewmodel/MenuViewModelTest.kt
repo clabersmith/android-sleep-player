@@ -1,17 +1,24 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
-import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlot
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
-import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
-import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 import com.github.clabersmith.sleepplayer.testutil.MainDispatcherRule
+import com.github.clabersmith.sleepplayer.testutil.data.local.FakePersistedSlotRepository
+import com.github.clabersmith.sleepplayer.testutil.domain.repository.FakePodcastRepository
+import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderFailing
+import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderHanging
+import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderProgress
+import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderSuccess
+import com.github.clabersmith.sleepplayer.testutil.data.local.FakeFileStorage
+import com.github.clabersmith.sleepplayer.testutil.playback.FakePodcastPlayer
+import com.github.clabersmith.sleepplayer.testutil.helpers.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -19,11 +26,10 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import java.io.File
+import org.junit.Before
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MenuViewModelTest() {
@@ -31,134 +37,21 @@ class MenuViewModelTest() {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val fakeRepository = object : PodcastRepository {
-        override suspend fun getFeeds(): List<PodcastFeed> {
-            return listOf(
-                PodcastFeed(
-                    id = "1",
-                    title = "Test Podcast 1",
-                    artworkUrl = "",
-                    category = "Relaxation",
-                    episodes = listOf(
-                        PodcastEpisode(
-                            id = "ep1",
-                            title = "Episode 1",
-                            description = "Test",
-                            audioUrl = ""
-                        )
-                    )
-                )
-            )
-        }
+    private lateinit var fakePodcastRepository : PodcastRepository
+    private lateinit var fakePersistedSlotRepository : SlotRepository
+    private lateinit var fakeDownloaderSuccess : Downloader
+    private lateinit var fakeFileStorage : FakeFileStorage
+    private lateinit var fakePodcastPlayer : FakePodcastPlayer
 
-        override suspend fun getCategories(): List<String> {
-            return listOf("Sleep", "Relaxation")
-        }
+    @Before
+    fun setup() {
+        //setup new text fixture for each test to ensure clean state
+        fakePodcastRepository = FakePodcastRepository()
+        fakePersistedSlotRepository = FakePersistedSlotRepository()
+        fakeDownloaderSuccess = FakeDownloaderSuccess()
+        fakeFileStorage = FakeFileStorage()
+        fakePodcastPlayer = FakePodcastPlayer()
     }
-
-    private val fakePersistedSlotRepository = object : SlotRepository {
-
-        private var stored: List<PersistedSlot> = emptyList()
-
-        override suspend fun saveSlots(slots: List<PersistedSlot>) {
-            stored = slots
-        }
-
-        override suspend fun loadSlots(): List<PersistedSlot> {
-            return stored
-        }
-
-        override suspend fun clear() {
-            stored = emptyList()
-        }
-    }
-    private val successFakeDownloader: Downloader = object : Downloader {
-        override suspend fun download(
-            url: String,
-            fileName: String,
-            onProgress: (Float) -> Unit,
-        ): File {
-            delay(10) // ensures intermediate state is visible
-            return File("dummy")
-        }
-
-    }
-
-    private val hangingDownloader: Downloader = object : Downloader {
-        override suspend fun download(
-            url: String,
-            fileName: String,
-            onProgress: (Float) -> Unit,
-        ): File {
-            delay(Long.MAX_VALUE)
-            return File("never")
-        }
-    }
-
-    private val failingDownloader = object : Downloader {
-        override suspend fun download(
-            url: String,
-            fileName: String,
-            onProgress: (Float) -> Unit,
-        ): File {
-            throw RuntimeException("Network error")
-        }
-    }
-
-    private class ProgressFakeDownloader : Downloader {
-
-        lateinit var progressCallback: (Float) -> Unit
-
-        override suspend fun download(
-            url: String,
-            fileName: String,
-            onProgress: (Float) -> Unit,
-        ): File {
-            progressCallback = onProgress
-            delay(Long.MAX_VALUE)
-            return File("dummy")
-        }
-    }
-
-    private class FakeFileStorage : FileStorage {
-
-        var deletedFileName: String? = null
-
-        override fun createFile(fileName: String): File {
-            return File("dummy")
-        }
-
-        override fun fileExists(fileName: String?): Boolean = true
-
-        override fun deleteFile(fileName: String?): Boolean {
-            deletedFileName = fileName
-            return true
-        }
-
-        override fun getFilePath(fileName: String): String {
-            return "dummy/${fileName}"
-        }
-    }
-
-    class FakePodcastPlayer : AudioPlayer {
-
-        var playing = false
-        var position = 0L
-        var duration = 60_000L
-
-        override suspend fun load(audioSource: AudioSource) { }
-
-        override fun play() { playing = true }
-        override fun pause() { playing = false }
-        override fun seekTo(positionMs: Long) { position = positionMs }
-
-        override fun currentPosition() = position
-        override fun duration() = duration
-        override fun isPlaying() = playing
-        override fun release() {}
-    }
-
-    private val fakeFileStorage : FakeFileStorage = FakeFileStorage()
 
     @Test
     fun `loads feeds on init`() = runTest {
@@ -280,7 +173,8 @@ class MenuViewModelTest() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `cancel download returns to non-downloading state`() = runTest {
-        val viewModel = createNewViewModel(hangingDownloader)
+        val fakeDownloaderHanging = FakeDownloaderHanging()
+        val viewModel = createNewViewModel(fakeDownloaderHanging)
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -298,7 +192,8 @@ class MenuViewModelTest() {
 
     @Test
     fun `cancel download does not add slot`() = runTest {
-        val viewModel = createNewViewModel(hangingDownloader)
+        val fakeDownloaderHanging = FakeDownloaderHanging()
+        val viewModel = createNewViewModel(fakeDownloaderHanging)
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -313,7 +208,7 @@ class MenuViewModelTest() {
 
     @Test
     fun `progress updates downloading row`() = runTest {
-        val progressFakeDownloader = ProgressFakeDownloader()
+        val progressFakeDownloader = FakeDownloaderProgress()
         val viewModel = createNewViewModel(progressFakeDownloader)
 
         navigateToEpisodeDetailDownload(viewModel)
@@ -331,7 +226,8 @@ class MenuViewModelTest() {
 
     @Test
     fun `failed download does not add slot`() = runTest {
-       val viewModel = createNewViewModel(failingDownloader)
+        val fakeDownloaderFailing = FakeDownloaderFailing()
+        val viewModel = createNewViewModel(fakeDownloaderFailing)
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -343,7 +239,6 @@ class MenuViewModelTest() {
 
     @Test
     fun `delete action removes slot`() = runTest {
-
         val viewModel = createNewViewModel()
 
         navigateToEpisodeDetailDownload(viewModel)
@@ -363,7 +258,6 @@ class MenuViewModelTest() {
 
     @Test
     fun `delete calls storage deleteFile`() = runTest {
-
         val viewModel = createNewViewModel()
 
         navigateToEpisodeDetailDownload(viewModel)
@@ -382,20 +276,8 @@ class MenuViewModelTest() {
 
     @Test
     fun `restoreSlots restores valid persisted slot`() = runTest {
-
-        fakePersistedSlotRepository.saveSlots(
-            listOf(
-                PersistedSlot(
-                    feedIndex = 0,
-                    feedName = "Test Podcast 1",
-                    episodeIndex = 1,
-                    episodeId = "ep1",
-                    fileName = ""
-                )
-            )
-        )
-
         val viewModel = createNewViewModel()
+        persistFakeSlot()
 
         advanceUntilIdle()
 
@@ -407,63 +289,111 @@ class MenuViewModelTest() {
         assertEquals(1, state.slots.size)
     }
 
-    //--------------
-    // Helper functions to set up specific menu states
-    //--------------
-    private fun createNewViewModel(
-        downloader: Downloader = successFakeDownloader): MenuViewModel = MenuViewModel(
-            podcastRepository = fakeRepository,
-            slotRepository = fakePersistedSlotRepository,
-            downloader = downloader,
-            storage = fakeFileStorage,
-            player = FakePodcastPlayer()
-        )
+    @Test
+    fun `play pause toggles playback`() = runTest {
+        val viewModel = createNewViewModel()
+        persistFakeSlot()
 
-    private fun TestScope.navigateToFeedsMenu(
-        viewModel: MenuViewModel
-    ) {
-        // Home -> Downloads
-        click(viewModel)
+        navigateToNowPlaying(viewModel)
 
-        //Downloads -> Categories (via 'Add New')
-        click(viewModel)
+        viewModel.onPlayPausePressed()
 
-        //Categories -> Feeds (via 'Relaxation' category)
-        click(viewModel)    }
+        assertTrue(fakePodcastPlayer.playCalled)
 
-    private fun TestScope.navigateToEpisodeDetailDownload(
-        viewModel: MenuViewModel
-    ) {
-        navigateToFeedsMenu(viewModel)
+        viewModel.onPlayPausePressed()
 
-        //Feeds -> Episodes
-        click(viewModel)
-
-        //Episodes -> Episode Detail
-        click(viewModel)
+        assertTrue(fakePodcastPlayer.pauseCalled)
     }
 
-    private fun TestScope.navigateToEpisodeDetailDownloaded(
-        viewModel: MenuViewModel
-    ) {
-        //Downloads (Add New) -> Categories
-        click(viewModel)
+    @Test
+    fun `isPlaying updates NowPlaying state`() = runTest {
+        val viewModel = createNewViewModel()
+        persistFakeSlot()
 
-        //Categories -> Feeds (via 'Relaxation' category)
-        click(viewModel)
+        navigateToNowPlaying(viewModel)  // Start playback
 
-        //Feeds -> Episodes
-        click(viewModel)
-
-        //Episodes -> Episode Detail
-        click(viewModel)
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun TestScope.click(viewModel: MenuViewModel) {
-        viewModel.confirmSelection()
         advanceUntilIdle()
-        println("click menuState result: ${viewModel.menuState.value}")
+
+        val state = viewModel.menuState.value as MenuState.NowPlaying
+        assertTrue(state.isPlaying)
+
+        viewModel.onPlayPausePressed()
+
+        advanceUntilIdle()
+
+        val updated = viewModel.menuState.value as MenuState.NowPlaying
+        assertFalse(updated.isPlaying)
+    }
+
+    @Test
+    fun `scan forward increases position`() = runTest {
+        val viewModel = createNewViewModel()
+        persistFakeSlot()
+
+        navigateToNowPlaying(viewModel)
+
+        viewModel.onScanForwardDown()
+
+        advanceTimeBy(200) // simulate 2 ticks
+
+        viewModel.stopScan()
+
+        assertTrue(fakePodcastPlayer.lastSeekPosition > 0)
+    }
+
+    @Test
+    fun `menu press stops playback`() = runTest {
+        val viewModel = createNewViewModel()
+        persistFakeSlot()
+
+        navigateToNowPlaying(viewModel)
+
+        viewModel.onMenuShortPress()
+
+        assertTrue(fakePodcastPlayer.stopCalled)
+    }
+
+    @Test
+    fun `scan job cancels on release`() = runTest {
+        val viewModel = createNewViewModel()
+        persistFakeSlot()
+
+        navigateToNowPlaying(viewModel)
+
+        viewModel.onScanForwardDown()
+        advanceTimeBy(300)
+
+        val positionDuringScan = fakePodcastPlayer.currentPosition
+
+        viewModel.onScanForwardUp()
+
+        advanceTimeBy(500)
+
+        assertEquals(positionDuringScan, fakePodcastPlayer.currentPosition)
+    }
+
+    private fun createNewViewModel(
+        downloader: Downloader = fakeDownloaderSuccess): MenuViewModel = MenuViewModel(
+        podcastRepository = fakePodcastRepository,
+        slotRepository = fakePersistedSlotRepository,
+        downloader = downloader,
+        storage = fakeFileStorage,
+        player = fakePodcastPlayer,
+        playbackDispatcher = Dispatchers.Default // Use real dispatcher instead of test to avoid issues with fake player state
+    )
+
+    private suspend fun persistFakeSlot() {
+        fakePersistedSlotRepository.saveSlots(
+            listOf(
+                PersistedSlot(
+                    feedIndex = 0,
+                    feedName = "Test Podcast 1",
+                    episodeIndex = 1,
+                    episodeId = "ep1",
+                    fileName = ""
+                )
+            )
+        )
     }
 
 }

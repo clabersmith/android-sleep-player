@@ -3,7 +3,7 @@ package com.github.clabersmith.sleepplayer.features.podcasts.data.repository
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.Assert.*
-import com.github.clabersmith.sleepplayer.testutil.FakePodcastDataSource
+import com.github.clabersmith.sleepplayer.testutil.data.remote.FakePodcastDataSource
 
 class DefaultPodcastRepositoryTest {
 

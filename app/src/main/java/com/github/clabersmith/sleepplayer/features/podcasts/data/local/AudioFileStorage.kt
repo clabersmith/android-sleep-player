@@ -22,7 +22,6 @@ class AudioFileStorage(
     }
 
     override fun deleteFile(fileName: String?): Boolean {
-        println("Deleting file: $fileName")
         if (fileName == null) return false
         val file = File(audioDirectory, fileName)
         return if (file.exists()) {
