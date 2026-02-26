@@ -308,15 +308,14 @@ sealed class MenuState() {
                         effects = listOf(MenuEffect.StopScan)
                     )
 
-                MenuEvent.MenuShortPress -> {
+                MenuEvent.MenuShortPress ->
                     MenuTransition(
-                        newState = MenuState.Play(
-                            slots = emptyList(), // temp; factory will fix later
-                            selectedIndex = 0
-                        ),
-                        effects = listOf(MenuEffect.StopPlayback)
+                        newState = this, // placeholder until we build the actual menu state
+                        effects = listOf(
+                            MenuEffect.StopPlayback,
+                            MenuEffect.ExitNowPlaying
+                        )
                     )
-                }
 
                 else -> MenuTransition(this)
             }

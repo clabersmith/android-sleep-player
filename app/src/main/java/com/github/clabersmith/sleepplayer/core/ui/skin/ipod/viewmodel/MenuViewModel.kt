@@ -62,7 +62,7 @@ class MenuViewModel(
     private val downloader: Downloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
-    private val playbackDispatcher: CoroutineDispatcher,
+    private val playbackDispatcher: CoroutineDispatcher
 ) : ViewModel(), MenuActions {
 
     private val _menuState = MutableStateFlow<MenuState>(Home())
@@ -114,16 +114,16 @@ class MenuViewModel(
     // Effect handler that executes side effects emitted by menu state transitions
     private val effectHandler = MenuEffectHandler(
         scope = viewModelScope,
-        downloader = downloader,
         storage = storage,
         player = player,
-        startScanForward = { startScanForward() },
-        startScanBack = { startScanBack() },
-        stopScan = { stopScan() },
         startDownload = { state -> startDownload(state) },
         cancelDownload = { state -> cancelDownload(state) },
         deleteEpisode = { state -> deleteEpisode(state) },
-        buildDownloadState = { setState(buildDownloadState()) }
+        buildDownloadState = { setState(buildDownloadState()) },
+        startScanForward = { startScanForward() },
+        startScanBack = { startScanBack() },
+        stopScan = { stopScan() },
+        navigateToPlay = { _menuState.value = buildPlayState() }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,

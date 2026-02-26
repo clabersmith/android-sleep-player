@@ -3,6 +3,7 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
@@ -23,7 +24,6 @@ import kotlinx.coroutines.launch
  */
 class MenuEffectHandler(
     private val scope: CoroutineScope,
-    private val downloader: Downloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
     private val startDownload: (state: EpisodeDetail) -> Unit,
@@ -32,11 +32,11 @@ class MenuEffectHandler(
     private val buildDownloadState: () -> Unit,
     private val startScanForward: () -> Unit,
     private val startScanBack: () -> Unit,
-    private val stopScan: () -> Unit
+    private val stopScan: () -> Unit,
+    private val navigateToPlay: () -> Unit
 ) {
     fun handle(effect: MenuEffect) {
         when (effect) {
-
             is MenuEffect.StartPlayback -> {
                 scope.launch {
                     val path = storage.getFilePath(effect.slot.fileName)
@@ -45,7 +45,7 @@ class MenuEffectHandler(
                 }
             }
 
-            MenuEffect.TogglePlayPause -> {
+            is MenuEffect.TogglePlayPause -> {
                 if (player.isPlaying()) {
                     player.pause()
                 } else {
@@ -53,7 +53,7 @@ class MenuEffectHandler(
                 }
             }
 
-            MenuEffect.StopPlayback -> {
+            is MenuEffect.StopPlayback -> {
                 player.stop()
             }
 
@@ -78,8 +78,12 @@ class MenuEffectHandler(
             is MenuEffect.DeleteEpisode ->
                 deleteEpisode(effect.state)
 
-            MenuEffect.BuildDownloadState ->
+            is MenuEffect.BuildDownloadState ->
                 buildDownloadState()
+
+            MenuEffect.ExitNowPlaying -> {
+                navigateToPlay()
+            }
         }
     }
 }

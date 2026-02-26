@@ -36,4 +36,9 @@ sealed interface MenuEffect {
     object StartScanForward : MenuEffect
     object StartScanBack : MenuEffect
     object StopScan : MenuEffect
+
+    // -----------------------------
+    // Navigation effects
+
+    object ExitNowPlaying : MenuEffect
 }
