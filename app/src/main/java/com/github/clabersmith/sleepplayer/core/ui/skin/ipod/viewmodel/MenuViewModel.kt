@@ -87,7 +87,6 @@ class MenuViewModel(
         viewModelScope.launch(playbackDispatcher) {
             while (isActive) {
                 delay(500)
-                println("pos=${player.currentPosition()} dur=${player.duration()}")
                 val currentState = _menuState.value
                 if (currentState is NowPlaying) {
                     dispatch(
@@ -182,7 +181,6 @@ class MenuViewModel(
     }
 
     fun startScanForward() {
-        println("calling startScanForward")
         if (scanJob != null) return
 
         wasPlayingBeforeScan = player.isPlaying()
@@ -236,7 +234,6 @@ class MenuViewModel(
     }
 
     fun stopScan() {
-        println("calling stopScan")
         scanJob?.cancel()
         scanJob = null
 
@@ -267,7 +264,8 @@ class MenuViewModel(
     fun confirmSelection() {
         val current = _menuState.value
 
-        if (current is Play || current is EpisodeDetail) {
+        if (current is Play || current is EpisodeDetail || current is NowPlaying
+            || current is Download || current is Categories || current is Feeds || current is Episodes) {
             dispatch(MenuEvent.Confirm)
         } else {
             _menuState.value = current.onConfirm(actions = this)
@@ -278,25 +276,18 @@ class MenuViewModel(
         return Download(
             slots = _slots.value,
             maxSlots = MAX_SLOT_SIZE,
+            categories = sortedCategories(),
+            allFeeds = _feeds.value,
             selectedIndex = 0
         )
     }
 
     override fun buildCategoriesState(): Categories {
         return Categories(
-            categories = _categories.value.sorted(),
-            selectedIndex = 0
-        )
-    }
+            categories = sortedCategories(),
+            allFeeds = _feeds.value,
+            selectedIndex = 0,
 
-    override fun buildFeedsState(category: String): Feeds {
-        val feeds = _feeds.value
-            .filter { it.category == category }
-
-        return Feeds(
-            feeds = feeds,
-            categoryName = category,
-            selectedIndex = 0
         )
     }
 
@@ -488,25 +479,21 @@ class MenuViewModel(
 
             is Categories -> Home()
 
-            is Feeds -> Categories(
-                categories = sortedCategories()
-            )
+            is Feeds -> buildCategoriesState()
 
             is Episodes ->
                 Feeds(
                     categoryName = state.categoryName ?: "",
-                    feeds = filteredFeeds(state.categoryName)
+                    categoryFeeds = filteredFeeds(state.categoryName),
+                    allFeeds = _feeds.value,
+                    selectedIndex = 0
                 )
 
             is EpisodeDetail -> {
 
                 when (state.origin) {
 
-                    DOWNLOAD ->
-                        Download(
-                            slots = _slots.value,
-                            maxSlots = MAX_SLOT_SIZE
-                        )
+                    DOWNLOAD -> buildDownloadState()
 
                     EPISODES ->
                         Episodes(
@@ -650,7 +637,6 @@ class MenuViewModel(
 interface MenuActions {
     fun buildDownloadState(): MenuState
     fun buildCategoriesState(): MenuState
-    fun buildFeedsState(category: String): MenuState
     fun buildEpisodesState(feedIndex: Int, categoryName: String): MenuState
     fun buildEpisodeDetailState(
         feedIndex: Int,

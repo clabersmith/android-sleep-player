@@ -18,7 +18,8 @@ fun TestScope.navigateToFeedsMenu(
     click(viewModel)
 
     //Categories -> Feeds (via 'Relaxation' category)
-    click(viewModel)    }
+    click(viewModel)
+}
 
 fun TestScope.navigateToEpisodeDetailDownload(
     viewModel: MenuViewModel

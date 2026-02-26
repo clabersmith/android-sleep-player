@@ -31,19 +31,23 @@ class MenuStateFactory(
         MenuState.Download(
             slots = slotsProvider(),
             maxSlots = maxSlots,
+            categoriesProvider().distinct().sorted(),
+            allFeeds = feedsProvider(),
             selectedIndex = selectedIndex
         )
 
     fun categories(selectedIndex: Int = 0) =
         MenuState.Categories(
             categories = categoriesProvider().distinct().sorted(),
+            allFeeds = feedsProvider(),
             selectedIndex = selectedIndex
         )
 
     fun feeds(category: String, selectedIndex: Int = 0) =
         MenuState.Feeds(
             categoryName = category,
-            feeds = feedsProvider().filter { it.category == category },
+            categoryFeeds = feedsProvider().filter { it.category == category },
+            allFeeds = feedsProvider(),
             selectedIndex = selectedIndex
         )
 

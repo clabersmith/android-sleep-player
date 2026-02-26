@@ -51,6 +51,8 @@ sealed class MenuState() {
     data class Download(
         val slots: List<SlotState>,
         val maxSlots: Int,
+        val categories: List<String>,
+        val allFeeds: List<PodcastFeed>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
@@ -61,31 +63,51 @@ sealed class MenuState() {
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
-        override fun onConfirm(actions: MenuActions): MenuState {
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
 
-            val slotCount = slots.size
-            val hasAddNew = slotCount < maxSlots
-            val addNewIndex = slotCount
+                MenuEvent.Confirm -> {
 
-            return when (selectedIndex) {
-                addNewIndex.takeIf { hasAddNew } ->
-                    actions.buildCategoriesState()
+                    val slotCount = slots.size
+                    val hasAddNew = slotCount < maxSlots
+                    val addNewIndex = slotCount
 
-                else -> {
-                    val slot = slots[selectedIndex]
-                    actions.buildEpisodeDetailState(
-                        slot.feedIndex,
-                        slot.episodeIndex,
-                        slot.loadedEpisode,
-                        origin = EpisodeDetail.Origin.DOWNLOAD
-                    )
+                    when {
+                        hasAddNew && selectedIndex == addNewIndex ->
+                            MenuTransition(
+                                newState = Categories(
+                                    categories = categories,
+                                    allFeeds = allFeeds,
+                                    selectedIndex = 0
+                                )
+                            )
+
+                        else -> {
+                            val slot = slots[selectedIndex]
+
+                            MenuTransition(
+                                newState = EpisodeDetail(
+                                    feedIndex = slot.feedIndex,
+                                    episodeIndex = slot.episodeIndex,
+                                    episode = slot.loadedEpisode,
+                                    origin = EpisodeDetail.Origin.DOWNLOAD,
+                                    actionRows = listOf(ActionRow.Delete),
+                                    selectedIndex = 0
+                                )
+                            )
+                        }
+                    }
                 }
+
+                else ->
+                    MenuTransition(this)
             }
         }
     }
 
     data class Categories(
         val categories: List<String>,
+        val allFeeds: List<PodcastFeed>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
@@ -95,28 +117,64 @@ sealed class MenuState() {
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
-        override fun onConfirm(actions: MenuActions): MenuState {
-            val category = categories[selectedIndex]
-            return actions.buildFeedsState(category)
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    val category = categories[selectedIndex]
+
+                    val categoryFeeds = allFeeds
+                        .filter { it.category == category }
+
+                    MenuTransition(
+                        newState = Feeds(
+                            categoryFeeds = categoryFeeds,
+                            allFeeds = allFeeds,
+                            categoryName = category,
+                            selectedIndex = 0
+                        )
+                    )
+                }
+
+                else ->
+                    MenuTransition(this)
+            }
         }
     }
 
     data class Feeds(
         val categoryName: String,
-        val feeds: List<PodcastFeed>,
+        val categoryFeeds: List<PodcastFeed>,
+        val allFeeds: List<PodcastFeed>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        override val itemCount: Int get() = feeds.size
+        override val itemCount: Int get() = categoryFeeds.size
 
         override val title = categoryName
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
-        override fun onConfirm(actions: MenuActions): MenuState {
-            val selectedFeed = feeds[selectedIndex]
-            val feedIndex = actions.feedIndexOf(selectedFeed)
-            return actions.buildEpisodesState(feedIndex, categoryName)
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    val selectedFeed = categoryFeeds[selectedIndex]
+                    val feedIndex = allFeeds.indexOf(selectedFeed)
+
+                    MenuTransition(
+                        newState = Episodes(
+                            feedIndex = feedIndex,
+                            categoryName = categoryName,
+                            episodes = selectedFeed.episodes,
+                            selectedIndex = 0
+                        )
+                    )
+                }
+
+                else ->
+                    MenuTransition(this)
+            }
         }
     }
 
@@ -133,14 +191,29 @@ sealed class MenuState() {
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
-        override fun onConfirm(actions: MenuActions): MenuState {
-            val episode = episodes[selectedIndex]
-            return actions.buildEpisodeDetailState(
-                feedIndex,
-                selectedIndex,
-                episode,
-                origin = EpisodeDetail.Origin.EPISODES
-            )
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    val episode = episodes[selectedIndex]
+
+                    MenuTransition(
+                        newState = EpisodeDetail(
+                            feedIndex = feedIndex,
+                            episodeIndex = selectedIndex,
+                            episode = episode,
+                            origin = EpisodeDetail.Origin.EPISODES,
+                            actionRows = listOf(
+                                ActionRow.Download   // or whatever default rows you use
+                            ),
+                            selectedIndex = 0
+                        )
+                    )
+                }
+
+                else ->
+                    MenuTransition(this)
+            }
         }
     }
 

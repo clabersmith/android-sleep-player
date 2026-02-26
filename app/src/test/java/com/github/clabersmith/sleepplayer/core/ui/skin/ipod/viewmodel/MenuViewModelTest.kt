@@ -1,10 +1,8 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
-import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
-import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlot
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
@@ -57,8 +55,7 @@ class MenuViewModelTest() {
     fun `loads feeds on init`() = runTest {
 
         val viewModel = createNewViewModel()
-
-        advanceUntilIdle()
+        advanceUntilIdle()  // Wait for load/init to complete
 
         // Navigate Home -> Downloads
         click(viewModel)
@@ -68,12 +65,13 @@ class MenuViewModelTest() {
         click(viewModel)
 
         val state = viewModel.menuState.value as MenuState.Feeds
-        assertEquals("Test Podcast 1", state.feeds.first().title)
+        assertEquals("Test Podcast 1", state.categoryFeeds.first().title)
     }
 
     @Test
-    fun `rotate forward increments index`() {
+    fun `rotate forward increments index`() = runTest {
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         viewModel.moveSelection(1)
 
@@ -82,8 +80,9 @@ class MenuViewModelTest() {
     }
 
     @Test
-    fun `rotate backward wraps to last index`() {
+    fun `rotate backward wraps to last index`() = runTest {
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         viewModel.moveSelection(-1)
 
@@ -92,8 +91,9 @@ class MenuViewModelTest() {
     }
 
     @Test
-    fun `forward wrap goes to zero`() {
+    fun `forward wrap goes to zero`() = runTest {
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         viewModel.moveSelection(3)
         viewModel.moveSelection(1)
@@ -103,8 +103,8 @@ class MenuViewModelTest() {
 
     @Test
     fun `moveSelection ignored in episode detail`() = runTest {
-
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -122,6 +122,7 @@ class MenuViewModelTest() {
     @Test
     fun `download enters downloading state`() = runTest {
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -135,8 +136,8 @@ class MenuViewModelTest() {
 
     @Test
     fun `download action adds slot`() = runTest {
-
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -151,8 +152,8 @@ class MenuViewModelTest() {
 
     @Test
     fun `already downloaded episode shows correct action`() = runTest {
-
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -175,6 +176,7 @@ class MenuViewModelTest() {
     fun `cancel download returns to non-downloading state`() = runTest {
         val fakeDownloaderHanging = FakeDownloaderHanging()
         val viewModel = createNewViewModel(fakeDownloaderHanging)
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -194,6 +196,7 @@ class MenuViewModelTest() {
     fun `cancel download does not add slot`() = runTest {
         val fakeDownloaderHanging = FakeDownloaderHanging()
         val viewModel = createNewViewModel(fakeDownloaderHanging)
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -210,6 +213,7 @@ class MenuViewModelTest() {
     fun `progress updates downloading row`() = runTest {
         val progressFakeDownloader = FakeDownloaderProgress()
         val viewModel = createNewViewModel(progressFakeDownloader)
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -228,6 +232,7 @@ class MenuViewModelTest() {
     fun `failed download does not add slot`() = runTest {
         val fakeDownloaderFailing = FakeDownloaderFailing()
         val viewModel = createNewViewModel(fakeDownloaderFailing)
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -240,6 +245,7 @@ class MenuViewModelTest() {
     @Test
     fun `delete action removes slot`() = runTest {
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -259,6 +265,7 @@ class MenuViewModelTest() {
     @Test
     fun `delete calls storage deleteFile`() = runTest {
         val viewModel = createNewViewModel()
+        advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
 
@@ -294,6 +301,8 @@ class MenuViewModelTest() {
         val viewModel = createNewViewModel()
         persistFakeSlot()
 
+        advanceUntilIdle()
+
         navigateToNowPlaying(viewModel)
 
         viewModel.onPlayPausePressed()
@@ -309,6 +318,8 @@ class MenuViewModelTest() {
     fun `isPlaying updates NowPlaying state`() = runTest {
         val viewModel = createNewViewModel()
         persistFakeSlot()
+
+        advanceUntilIdle()
 
         navigateToNowPlaying(viewModel)  // Start playback
 
@@ -330,6 +341,8 @@ class MenuViewModelTest() {
         val viewModel = createNewViewModel()
         persistFakeSlot()
 
+        advanceUntilIdle()
+
         navigateToNowPlaying(viewModel)
 
         viewModel.onScanForwardDown()
@@ -346,6 +359,8 @@ class MenuViewModelTest() {
         val viewModel = createNewViewModel()
         persistFakeSlot()
 
+        advanceUntilIdle()
+
         navigateToNowPlaying(viewModel)
 
         viewModel.onMenuShortPress()
@@ -357,6 +372,8 @@ class MenuViewModelTest() {
     fun `scan job cancels on release`() = runTest {
         val viewModel = createNewViewModel()
         persistFakeSlot()
+
+        advanceUntilIdle()
 
         navigateToNowPlaying(viewModel)
 
@@ -372,15 +389,15 @@ class MenuViewModelTest() {
         assertEquals(positionDuringScan, fakePodcastPlayer.currentPosition)
     }
 
-    private fun createNewViewModel(
+    private suspend fun createNewViewModel(
         downloader: Downloader = fakeDownloaderSuccess): MenuViewModel = MenuViewModel(
-        podcastRepository = fakePodcastRepository,
-        slotRepository = fakePersistedSlotRepository,
-        downloader = downloader,
-        storage = fakeFileStorage,
-        player = fakePodcastPlayer,
-        playbackDispatcher = Dispatchers.Default // Use real dispatcher instead of test to avoid issues with fake player state
-    )
+            podcastRepository = fakePodcastRepository,
+            slotRepository = fakePersistedSlotRepository,
+            downloader = downloader,
+            storage = fakeFileStorage,
+            player = fakePodcastPlayer,
+            playbackDispatcher = Dispatchers.Default
+        )
 
     private suspend fun persistFakeSlot() {
         fakePersistedSlotRepository.saveSlots(

@@ -18,9 +18,16 @@ import kotlinx.coroutines.launch
  * provided [scope].
  *
  * @param scope CoroutineScope used to launch asynchronous work.
- * @param downloader Downloader for episode downloads.
  * @param storage FileStorage for local file operations.
  * @param player AudioPlayer used for playback control.
+ * @param startDownload Callback to initiate episode download.
+ * @param cancelDownload Callback to cancel an ongoing episode download.
+ * @param deleteEpisode Callback to delete a downloaded episode.
+ * @param buildDownloadState Callback to refresh the download state of episodes.
+ * @param startScanForward Callback to start scanning forward in the current episode.
+ * @param startScanBack Callback to start scanning backward in the current episode.
+ * @param stopScan Callback to stop any ongoing scanning.
+ * @param navigateToPlay Callback to navigate to the Now Playing screen.
  */
 class MenuEffectHandler(
     private val scope: CoroutineScope,
