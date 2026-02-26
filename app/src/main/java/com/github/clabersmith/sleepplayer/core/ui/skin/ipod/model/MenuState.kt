@@ -11,9 +11,15 @@ sealed class MenuState() {
 
     abstract val title: String
 
+    open fun reduce(event: MenuEvent): MenuTransition {
+        return MenuTransition(this)
+    }
+
     abstract fun copyWithIndex(newIndex: Int): MenuState
 
-    abstract fun onConfirm(actions: MenuActions): MenuState
+    open fun onConfirm(actions: MenuActions): MenuState {
+        return this
+    }
 
     open fun onPlayPause(actions: MenuActions): MenuState = this
     open fun onScanForwardDown(actions: MenuActions) = this
@@ -203,9 +209,25 @@ sealed class MenuState() {
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
-        override fun onConfirm(actions: MenuActions): MenuState {
-            val slot = slots[selectedIndex]
-            return actions.startPlayback(slot)
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    val slot = slots[selectedIndex]
+
+                    MenuTransition(
+                        newState = NowPlaying(
+                            slot = slot,
+                            durationMs = 0L,
+                            positionMs = 0L,
+                            isPlaying = true
+                        ),
+                        effects = listOf(MenuEffect.StartPlayback(slot))
+                    )
+                }
+
+                else -> MenuTransition(this)
+            }
         }
     }
 
@@ -220,35 +242,65 @@ sealed class MenuState() {
 
         override val title = "Now Playing"
 
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
+
+                MenuEvent.PlayPause -> {
+                    MenuTransition(
+                        newState = copy(isPlaying = !isPlaying),
+                        effects = listOf(MenuEffect.TogglePlayPause)
+                    )
+                }
+
+                is MenuEvent.PlaybackProgress -> {
+                    MenuTransition(
+                        newState = copy(
+                            positionMs = event.positionMs,
+                            durationMs = event.durationMs,
+                            isPlaying = event.isPlaying
+                        )
+                    )
+                }
+
+                MenuEvent.ScanForwardDown ->
+                    MenuTransition(
+                        this,
+                        effects = listOf(MenuEffect.StartScanForward)
+                    )
+
+                MenuEvent.ScanForwardUp ->
+                    MenuTransition(
+                        this,
+                        effects = listOf(MenuEffect.StopScan)
+                    )
+
+                MenuEvent.ScanBackDown ->
+                    MenuTransition(
+                        this,
+                        effects = listOf(MenuEffect.StartScanBack)
+                    )
+
+                MenuEvent.ScanBackUp ->
+                    MenuTransition(
+                        this,
+                        effects = listOf(MenuEffect.StopScan)
+                    )
+
+                MenuEvent.MenuShortPress -> {
+                    MenuTransition(
+                        newState = MenuState.Play(
+                            slots = emptyList(), // temp; factory will fix later
+                            selectedIndex = 0
+                        ),
+                        effects = listOf(MenuEffect.StopPlayback)
+                    )
+                }
+
+                else -> MenuTransition(this)
+            }
+        }
+
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
-
-        override fun onConfirm(actions: MenuActions): MenuState {
-            return this //no op
-        }
-
-        override fun onPlayPause(actions: MenuActions): MenuState {
-            return actions.togglePlayPause(this)
-        }
-
-        override fun onScanForwardDown(actions: MenuActions): MenuState {
-            actions.startScanForward()
-            return this
-        }
-
-        override fun onScanForwardUp(actions: MenuActions): MenuState {
-            actions.stopScan()
-            return this
-        }
-
-        override fun onScanBackDown(actions: MenuActions): MenuState {
-            actions.startScanBack()
-            return this
-        }
-
-        override fun onScanBackUp(actions: MenuActions): MenuState {
-            actions.stopScan()
-            return this
-        }
     }
 
 }

@@ -3,24 +3,23 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
-import com.github.clabersmith.sleepplayer.core.playback.AudioSource
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.*
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.DOWNLOAD
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.EPISODES
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.*
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
-import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
-import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.DownloadConstants.MAX_SLOT_SIZE
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
+import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
+import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +28,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
-
 
 /**
  * ViewModel that drives the iPod-style menu and playback UI.
@@ -64,7 +62,7 @@ class MenuViewModel(
     private val downloader: Downloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
-    private val playbackDispatcher: CoroutineDispatcher
+    private val playbackDispatcher: CoroutineDispatcher,
 ) : ViewModel(), MenuActions {
 
     private val _menuState = MutableStateFlow<MenuState>(Home())
@@ -88,19 +86,33 @@ class MenuViewModel(
         viewModelScope.launch {
             _feeds.value = podcastRepository.getFeeds()
             _categories.value = podcastRepository.getCategories()
-
             restoreSlots()   // after feeds exist
+        }
+    }
+
+    private val effectHandler = MenuEffectHandler(
+        scope = viewModelScope,
+        downloader = downloader,
+        storage = storage,
+        player = player,
+        startScanForward = { startScanForward() },
+        startScanBack = { startScanBack() },
+        stopScan = { stopScan() }
+    )
+
+    fun dispatch(event: MenuEvent) {
+        val current = _menuState.value
+        val transition = current.reduce(event)
+
+        _menuState.value = transition.newState
+
+        transition.effects.forEach {
+            effectHandler.handle(it)
         }
     }
 
     private fun setState(newState: MenuState) {
         _menuState.value = newState
-
-        if (newState is NowPlaying) {
-            startObservingPlaybackProgress()
-        } else {
-            stopObservingPlaybackProgress()
-        }
     }
 
     // -----------------------------
@@ -118,22 +130,23 @@ class MenuViewModel(
     // -----------------------------
 
     fun onScanForwardDown() {
-        _menuState.update { it.onScanForwardDown(actions = this) }
+        dispatch(MenuEvent.ScanForwardDown)
     }
 
     fun onScanForwardUp() {
-        _menuState.update { it.onScanForwardUp(actions = this) }
+        dispatch(MenuEvent.ScanForwardUp)
     }
 
     fun onScanBackDown() {
-        _menuState.update { it.onScanBackDown(actions = this) }
+        dispatch(MenuEvent.ScanBackDown)
     }
 
     fun onScanBackUp() {
-        _menuState.update { it.onScanBackUp(actions = this) }
+        dispatch(MenuEvent.ScanBackUp)
     }
 
     override fun startScanForward() {
+        println("calling startScanForward")
         if (scanJob != null) return
 
         wasPlayingBeforeScan = player.isPlaying()
@@ -187,6 +200,7 @@ class MenuViewModel(
     }
 
     override fun stopScan() {
+        println("calling stopScan")
         scanJob?.cancel()
         scanJob = null
 
@@ -208,7 +222,7 @@ class MenuViewModel(
     // Click Wheel Play/Pause
     //------------------------------
     fun onPlayPausePressed() {
-        _menuState.update { it.onPlayPause(actions = this) }
+        dispatch(MenuEvent.PlayPause)
     }
 
     // -----------------------------
@@ -216,9 +230,13 @@ class MenuViewModel(
     // -----------------------------
     fun confirmSelection() {
         val current = _menuState.value
-        setState(current.onConfirm(actions = this))
-    }
 
+        if (current is Play) {
+            dispatch(MenuEvent.Confirm)
+        } else {
+            _menuState.value = current.onConfirm(actions = this)
+        }
+    }
     override fun buildDownloadState(): Download {
         return Download(
             slots = _slots.value,
@@ -247,7 +265,7 @@ class MenuViewModel(
 
     override fun buildEpisodesState(
         feedIndex: Int,
-        categoryName: String
+        categoryName: String,
     ): Episodes {
 
         val feed = _feeds.value[feedIndex]
@@ -264,7 +282,7 @@ class MenuViewModel(
         feedIndex: Int,
         episodeIndex: Int,
         episode: PodcastEpisode,
-        origin: Origin
+        origin: Origin,
     ): EpisodeDetail {
 
         val alreadyDownloaded = _slots.value.any {
@@ -346,7 +364,7 @@ class MenuViewModel(
     }
 
     private suspend fun downloadEpisode(
-        state: EpisodeDetail
+        state: EpisodeDetail,
     ): DownloadResult {
 
         val feed = _feeds.value.getOrNull(state.feedIndex)
@@ -424,10 +442,6 @@ class MenuViewModel(
         setState(Home())
     }
 
-    override fun stopPlayback() {
-        player.stop()
-    }
-
     fun goUp(): MenuState {
         return when (val state = _menuState.value) {
 
@@ -469,11 +483,12 @@ class MenuViewModel(
             is Play -> Home(selectedIndex = 1)
 
             is NowPlaying -> {
-                stopPlayback()
-                Play(
-                    slots = _slots.value,
-                    selectedIndex = 0
-                )
+                dispatch(MenuEvent.MenuShortPress)
+                _menuState.value
+//                Play(
+//                    slots = _slots.value,
+//                    selectedIndex = 0
+//                )
             }
         }
     }
@@ -581,7 +596,7 @@ class MenuViewModel(
     }
 
     private fun restoreEpisodeDetail(
-        previous: EpisodeDetail
+        previous: EpisodeDetail,
     ) {
         val alreadyDownloaded = _slots.value.any {
             it.feedIndex == previous.feedIndex &&
@@ -601,53 +616,23 @@ class MenuViewModel(
     //----------------
     // Audio Helpers
     //----------------
-    override fun startPlayback(slot: SlotState): MenuState {
-        val filePath = storage.getFilePath(slot.fileName)
 
-        viewModelScope.launch {
-            player.load(AudioSource(filePath))
-            player.play()
-        }
-
-        return NowPlaying(
-            slot = slot,
-            durationMs = 0L,
-            positionMs = 0L,
-            isPlaying = true
-        )
-    }
-
-    private fun startObservingPlaybackProgress() {
-        playProgressJob?.cancel()
-
-        playProgressJob = viewModelScope.launch(playbackDispatcher) {
+    init {
+        viewModelScope.launch(playbackDispatcher) {
             while (isActive) {
                 delay(500)
-
+                println("pos=${player.currentPosition()} dur=${player.duration()}")
                 val currentState = _menuState.value
                 if (currentState is NowPlaying) {
-                    _menuState.value = currentState.copy(
-                        positionMs = player.currentPosition(),
-                        durationMs = player.duration(),
-                        isPlaying = player.isPlaying()
+                    dispatch(
+                        MenuEvent.PlaybackProgress(
+                            positionMs = player.currentPosition(),
+                            durationMs = player.duration(),
+                            isPlaying = player.isPlaying()
+                        )
                     )
                 }
             }
-        }
-    }
-
-    private fun stopObservingPlaybackProgress() {
-        playProgressJob?.cancel()
-        playProgressJob = null
-    }
-
-    override fun togglePlayPause(state: NowPlaying): MenuState {
-        if (player.isPlaying()) {
-            player.pause()
-            return state.copy(isPlaying = false)
-        } else {
-            player.play()
-            return state.copy(isPlaying = true)
         }
     }
 
@@ -668,7 +653,7 @@ interface MenuActions {
         feedIndex: Int,
         episodeIndex: Int,
         episode: PodcastEpisode,
-        origin: Origin
+        origin: Origin,
     ): MenuState
 
     fun buildPlayState(): MenuState
@@ -681,9 +666,6 @@ interface MenuActions {
     fun startDownload(state: EpisodeDetail)
     fun cancelDownload(state: EpisodeDetail)
     fun deleteEpisode(state: EpisodeDetail)
-    fun startPlayback(slot: SlotState): MenuState
-    fun togglePlayPause(state: NowPlaying): MenuState
-    fun stopPlayback()
     fun startScanForward()
     fun startScanBack()
     fun stopScan()
