@@ -3,6 +3,7 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +26,10 @@ class MenuEffectHandler(
     private val downloader: Downloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
+    private val startDownload: (state: EpisodeDetail) -> Unit,
+    private val cancelDownload: (state: EpisodeDetail) -> Unit,
+    private val deleteEpisode: (state: EpisodeDetail) -> Unit,
+    private val buildDownloadState: () -> Unit,
     private val startScanForward: () -> Unit,
     private val startScanBack: () -> Unit,
     private val stopScan: () -> Unit
@@ -64,17 +69,17 @@ class MenuEffectHandler(
                 stopScan()
             }
 
-            is MenuEffect.StartDownload -> {
-                // Move download coroutine logic here
-            }
+            is MenuEffect.StartDownload ->
+                startDownload(effect.state)
 
-            is MenuEffect.CancelDownload -> {
-                // Cancel download job
-            }
+            is MenuEffect.CancelDownload ->
+                cancelDownload(effect.state)
 
-            is MenuEffect.DeleteEpisode -> {
-                // Delete file + slot removal
-            }
+            is MenuEffect.DeleteEpisode ->
+                deleteEpisode(effect.state)
+
+            MenuEffect.BuildDownloadState ->
+                buildDownloadState()
         }
     }
 }

@@ -80,8 +80,29 @@ class MenuViewModel(
 
     init {
         load()
+
+        //----------------
+        // Track audio playback progress every 500ms while playing
+        //----------------
+        viewModelScope.launch(playbackDispatcher) {
+            while (isActive) {
+                delay(500)
+                println("pos=${player.currentPosition()} dur=${player.duration()}")
+                val currentState = _menuState.value
+                if (currentState is NowPlaying) {
+                    dispatch(
+                        MenuEvent.PlaybackProgress(
+                            positionMs = player.currentPosition(),
+                            durationMs = player.duration(),
+                            isPlaying = player.isPlaying()
+                        )
+                    )
+                }
+            }
+        }
     }
 
+    // Initial load of feeds, categories and persisted download slots
     private fun load() {
         viewModelScope.launch {
             _feeds.value = podcastRepository.getFeeds()
@@ -90,6 +111,7 @@ class MenuViewModel(
         }
     }
 
+    // Effect handler that executes side effects emitted by menu state transitions
     private val effectHandler = MenuEffectHandler(
         scope = viewModelScope,
         downloader = downloader,
@@ -97,9 +119,15 @@ class MenuViewModel(
         player = player,
         startScanForward = { startScanForward() },
         startScanBack = { startScanBack() },
-        stopScan = { stopScan() }
+        stopScan = { stopScan() },
+        startDownload = { state -> startDownload(state) },
+        cancelDownload = { state -> cancelDownload(state) },
+        deleteEpisode = { state -> deleteEpisode(state) },
+        buildDownloadState = { setState(buildDownloadState()) }
     )
 
+    // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
+    // updates the state and executes any emitted effects.
     fun dispatch(event: MenuEvent) {
         val current = _menuState.value
         val transition = current.reduce(event)
@@ -113,6 +141,14 @@ class MenuViewModel(
 
     private fun setState(newState: MenuState) {
         _menuState.value = newState
+    }
+
+    // Clean up resources on ViewModel clearance
+    override fun onCleared() {
+        super.onCleared()
+        playProgressJob?.cancel()
+        scanJob?.cancel()
+        player.release()
     }
 
     // -----------------------------
@@ -145,7 +181,7 @@ class MenuViewModel(
         dispatch(MenuEvent.ScanBackUp)
     }
 
-    override fun startScanForward() {
+    fun startScanForward() {
         println("calling startScanForward")
         if (scanJob != null) return
 
@@ -173,7 +209,7 @@ class MenuViewModel(
         }
     }
 
-    override fun startScanBack() {
+    fun startScanBack() {
         if (scanJob != null) return
 
         wasPlayingBeforeScan = player.isPlaying()
@@ -199,7 +235,7 @@ class MenuViewModel(
         }
     }
 
-    override fun stopScan() {
+    fun stopScan() {
         println("calling stopScan")
         scanJob?.cancel()
         scanJob = null
@@ -231,12 +267,13 @@ class MenuViewModel(
     fun confirmSelection() {
         val current = _menuState.value
 
-        if (current is Play) {
+        if (current is Play || current is EpisodeDetail) {
             dispatch(MenuEvent.Confirm)
         } else {
             _menuState.value = current.onConfirm(actions = this)
         }
     }
+
     override fun buildDownloadState(): Download {
         return Download(
             slots = _slots.value,
@@ -329,7 +366,7 @@ class MenuViewModel(
     }
 
 
-    override fun startDownload(state: EpisodeDetail) {
+    fun startDownload(state: EpisodeDetail) {
         if (state.isDownloading) return
 
         downloadJob?.cancel()
@@ -414,12 +451,12 @@ class MenuViewModel(
         }
     }
 
-    override fun cancelDownload(state: EpisodeDetail) {
+    fun cancelDownload(state: EpisodeDetail) {
         downloadJob?.cancel()
         restoreEpisodeDetail(state)
     }
 
-    override fun deleteEpisode(state: EpisodeDetail) {
+    fun deleteEpisode(state: EpisodeDetail) {
         val slot = _slots.value.find {
             it.feedIndex == state.feedIndex &&
                     it.episodeIndex == state.episodeIndex
@@ -485,10 +522,6 @@ class MenuViewModel(
             is NowPlaying -> {
                 dispatch(MenuEvent.MenuShortPress)
                 _menuState.value
-//                Play(
-//                    slots = _slots.value,
-//                    selectedIndex = 0
-//                )
             }
         }
     }
@@ -612,36 +645,6 @@ class MenuViewModel(
             selectedIndex = 0)
         )
     }
-
-    //----------------
-    // Audio Helpers
-    //----------------
-
-    init {
-        viewModelScope.launch(playbackDispatcher) {
-            while (isActive) {
-                delay(500)
-                println("pos=${player.currentPosition()} dur=${player.duration()}")
-                val currentState = _menuState.value
-                if (currentState is NowPlaying) {
-                    dispatch(
-                        MenuEvent.PlaybackProgress(
-                            positionMs = player.currentPosition(),
-                            durationMs = player.duration(),
-                            isPlaying = player.isPlaying()
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        playProgressJob?.cancel()
-        scanJob?.cancel()
-        player.release()
-    }
 }
 
 interface MenuActions {
@@ -661,14 +664,6 @@ interface MenuActions {
     fun buildNowPlayingState(slot: SlotState): NowPlaying
 
     fun feedIndexOf(feed: PodcastFeed): Int
-
-    // Side-effect actions
-    fun startDownload(state: EpisodeDetail)
-    fun cancelDownload(state: EpisodeDetail)
-    fun deleteEpisode(state: EpisodeDetail)
-    fun startScanForward()
-    fun startScanBack()
-    fun stopScan()
 
 }
 

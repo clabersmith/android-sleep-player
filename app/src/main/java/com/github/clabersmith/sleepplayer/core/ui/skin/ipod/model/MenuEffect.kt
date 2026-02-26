@@ -1,5 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail
+
 /**
  * Describes side effects that must be executed after a state transition.
  *
@@ -11,20 +13,10 @@ sealed interface MenuEffect {
     // Download effects
     // -----------------------------
 
-    data class StartDownload(
-        val feedIndex: Int,
-        val episodeIndex: Int
-    ) : MenuEffect
-
-    data class CancelDownload(
-        val feedIndex: Int,
-        val episodeIndex: Int
-    ) : MenuEffect
-
-    data class DeleteEpisode(
-        val feedIndex: Int,
-        val episodeIndex: Int
-    ) : MenuEffect
+    data class StartDownload(val state: EpisodeDetail) : MenuEffect
+    data class CancelDownload(val state: EpisodeDetail) : MenuEffect
+    data class DeleteEpisode(val state: EpisodeDetail) : MenuEffect
+    object BuildDownloadState : MenuEffect
 
     // -----------------------------
     // Playback effects

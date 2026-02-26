@@ -159,37 +159,59 @@ sealed class MenuState() {
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
-        override fun onConfirm(actions: MenuActions): MenuState {
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
 
-            val action = actionRows.getOrNull(selectedIndex) ?: return this
+                MenuEvent.Confirm -> {
 
-            return when (action) {
+                    val action = actionRows.getOrNull(selectedIndex)
+                        ?: return MenuTransition(this)
 
-                ActionRow.Download -> {
-                    actions.startDownload(this)
-                    // Immediately return "downloading" UI state
-                    copy(
-                        isDownloading = true,
-                        actionRows = listOf(ActionRow.Downloading(), ActionRow.Cancel),
-                        selectedIndex = 1
-                    )
+                    when (action) {
+
+                        ActionRow.Download ->
+                            MenuTransition(
+                                newState = copy(
+                                    isDownloading = true,
+                                    actionRows = listOf(
+                                        ActionRow.Downloading(),
+                                        ActionRow.Cancel
+                                    ),
+                                    selectedIndex = 1
+                                ),
+                                effects = listOf(
+                                    MenuEffect.StartDownload(this)
+                                )
+                            )
+
+                        ActionRow.Cancel ->
+                            MenuTransition(
+                                newState = copy(
+                                    isDownloading = false,
+                                    actionRows = listOf(ActionRow.Download),
+                                    selectedIndex = 0
+                                ),
+                                effects = listOf(
+                                    MenuEffect.CancelDownload(this)
+                                )
+                            )
+
+                        ActionRow.Delete ->
+                            MenuTransition(
+                                newState = this, // temporary
+                                effects = listOf(
+                                    MenuEffect.DeleteEpisode(this),
+                                    MenuEffect.BuildDownloadState
+                                )
+                            )
+
+                        else ->
+                            MenuTransition(this)
+                    }
                 }
 
-                ActionRow.Cancel -> {
-                    actions.cancelDownload(this)
-                    copy(
-                        isDownloading = false,
-                        actionRows = listOf(ActionRow.Download),
-                        selectedIndex = 0
-                    )
-                }
-
-                ActionRow.Delete -> {
-                    actions.deleteEpisode(this)
-                    actions.buildDownloadState()
-                }
-
-                else -> this
+                else ->
+                    MenuTransition(this)
             }
         }
 
