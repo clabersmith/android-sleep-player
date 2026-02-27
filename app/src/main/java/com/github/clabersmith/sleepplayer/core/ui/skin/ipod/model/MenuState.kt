@@ -78,6 +78,7 @@ sealed class MenuState() {
                                 newState = Categories(
                                     categories = categories,
                                     allFeeds = allFeeds,
+                                    slots = slots,
                                     selectedIndex = 0
                                 )
                             )
@@ -108,6 +109,7 @@ sealed class MenuState() {
     data class Categories(
         val categories: List<String>,
         val allFeeds: List<PodcastFeed>,
+        val slots: List<SlotState>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
@@ -130,6 +132,7 @@ sealed class MenuState() {
                         newState = Feeds(
                             categoryFeeds = categoryFeeds,
                             allFeeds = allFeeds,
+                            slots = slots,
                             categoryName = category,
                             selectedIndex = 0
                         )
@@ -146,6 +149,7 @@ sealed class MenuState() {
         val categoryName: String,
         val categoryFeeds: List<PodcastFeed>,
         val allFeeds: List<PodcastFeed>,
+        val slots: List<SlotState>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
@@ -167,6 +171,7 @@ sealed class MenuState() {
                             feedIndex = feedIndex,
                             categoryName = categoryName,
                             episodes = selectedFeed.episodes,
+                            slots = slots,
                             selectedIndex = 0
                         )
                     )
@@ -182,6 +187,7 @@ sealed class MenuState() {
         val feedIndex: Int,
         val episodes: List<PodcastEpisode>,
         val categoryName: String?,
+        val slots: List<SlotState>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
@@ -197,15 +203,25 @@ sealed class MenuState() {
                 MenuEvent.Confirm -> {
                     val episode = episodes[selectedIndex]
 
+                    val alreadyDownloaded =
+                        slots.any {
+                            it.feedIndex == feedIndex &&
+                                    it.episodeIndex == selectedIndex
+                        }
+
+                    val rows =
+                        if (alreadyDownloaded)
+                            listOf(ActionRow.AlreadyDownloaded)
+                        else
+                            listOf(ActionRow.Download)
+
                     MenuTransition(
                         newState = EpisodeDetail(
                             feedIndex = feedIndex,
                             episodeIndex = selectedIndex,
                             episode = episode,
                             origin = EpisodeDetail.Origin.EPISODES,
-                            actionRows = listOf(
-                                ActionRow.Download   // or whatever default rows you use
-                            ),
+                            actionRows = rows,
                             selectedIndex = 0
                         )
                     )

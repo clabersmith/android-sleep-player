@@ -286,6 +286,7 @@ class MenuViewModel(
         return Categories(
             categories = sortedCategories(),
             allFeeds = _feeds.value,
+            slots = _slots.value,
             selectedIndex = 0,
 
         )
@@ -302,6 +303,7 @@ class MenuViewModel(
             episodes = feed.episodes,
             feedIndex = feedIndex,
             categoryName = categoryName,
+            slots = _slots.value,
             selectedIndex = 0
         )
     }
@@ -486,6 +488,7 @@ class MenuViewModel(
                     categoryName = state.categoryName ?: "",
                     categoryFeeds = filteredFeeds(state.categoryName),
                     allFeeds = _feeds.value,
+                    slots = _slots.value,
                     selectedIndex = 0
                 )
 
@@ -499,6 +502,7 @@ class MenuViewModel(
                         Episodes(
                             feedIndex = state.feedIndex,
                             episodes = _feeds.value[state.feedIndex].episodes,
+                            slots = _slots.value,
                             categoryName = _feeds.value[state.feedIndex].category
                         )
                 }

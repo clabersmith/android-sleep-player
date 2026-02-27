@@ -40,6 +40,7 @@ class MenuStateFactory(
         MenuState.Categories(
             categories = categoriesProvider().distinct().sorted(),
             allFeeds = feedsProvider(),
+            slots = slotsProvider(),
             selectedIndex = selectedIndex
         )
 
@@ -48,6 +49,7 @@ class MenuStateFactory(
             categoryName = category,
             categoryFeeds = feedsProvider().filter { it.category == category },
             allFeeds = feedsProvider(),
+            slots = slotsProvider(),
             selectedIndex = selectedIndex
         )
 
@@ -62,6 +64,7 @@ class MenuStateFactory(
             feedIndex = feedIndex,
             episodes = feed.episodes,
             categoryName = categoryName,
+            slots = slotsProvider(),
             selectedIndex = selectedIndex
         )
     }

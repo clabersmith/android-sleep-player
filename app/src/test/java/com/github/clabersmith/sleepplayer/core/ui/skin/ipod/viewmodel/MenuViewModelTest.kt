@@ -161,6 +161,8 @@ class MenuViewModelTest() {
         click(viewModel)
         assertTrue(viewModel.menuState.value is MenuState.Download)
 
+        val downloadState = viewModel.menuState.value as MenuState.Download
+
         viewModel.moveSelection(1) // Move to 'Add New'
 
         navigateToEpisodeDetailDownloaded(viewModel)
