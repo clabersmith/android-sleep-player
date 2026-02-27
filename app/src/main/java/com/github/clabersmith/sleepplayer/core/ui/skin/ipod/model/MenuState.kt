@@ -1,6 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuActions
+import com.github.clabersmith.sleepplayer.features.podcasts.domain.DownloadConstants.MAX_SLOT_SIZE
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 
@@ -17,17 +17,10 @@ sealed class MenuState() {
 
     abstract fun copyWithIndex(newIndex: Int): MenuState
 
-    open fun onConfirm(actions: MenuActions): MenuState {
-        return this
-    }
-
-    open fun onPlayPause(actions: MenuActions): MenuState = this
-    open fun onScanForwardDown(actions: MenuActions) = this
-    open fun onScanForwardUp(actions: MenuActions) = this
-    open fun onScanBackDown(actions: MenuActions) = this
-    open fun onScanBackUp(actions: MenuActions) = this
-
     data class Home(
+        val slots: List<SlotState>,
+        val categories: List<String>,
+        val allFeeds: List<PodcastFeed>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
@@ -37,13 +30,35 @@ sealed class MenuState() {
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
-        override fun onConfirm(actions: MenuActions): MenuState {
-            return when (selectedIndex) {
-                0 -> actions.buildDownloadState()
+        override fun reduce(event: MenuEvent): MenuTransition {
+            println("Home slots when navigating to Play: ${slots.size}")
+            return when (event) {
 
-                1 -> actions.buildPlayState()
+                MenuEvent.Confirm -> {
+                    when (selectedIndex) {
 
-                else -> this
+                        0 -> MenuTransition(
+                            newState = Download(
+                                slots = slots,
+                                maxSlots = MAX_SLOT_SIZE,
+                                categories = categories,
+                                allFeeds = allFeeds,
+                                selectedIndex = 0
+                            )
+                        )
+
+                        1 -> MenuTransition(
+                            newState = Play(
+                                slots = slots,
+                                selectedIndex = 0
+                            )
+                        )
+
+                        else -> MenuTransition(this)
+                    }
+                }
+
+                else -> MenuTransition(this)
             }
         }
     }
@@ -59,7 +74,7 @@ sealed class MenuState() {
         override val itemCount: Int
             get() = slots.size + if (slots.size < maxSlots) 1 else 0
 
-        override val title = "Downloaded"
+        override val title = "Downloads"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 

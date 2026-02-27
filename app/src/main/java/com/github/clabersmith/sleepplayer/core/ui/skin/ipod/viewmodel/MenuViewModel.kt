@@ -7,7 +7,6 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.*
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.DOWNLOAD
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail.Origin.EPISODES
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
@@ -63,9 +62,13 @@ class MenuViewModel(
     private val storage: FileStorage,
     private val player: AudioPlayer,
     private val playbackDispatcher: CoroutineDispatcher
-) : ViewModel(), MenuActions {
+) : ViewModel() {
 
-    private val _menuState = MutableStateFlow<MenuState>(Home())
+    private val _menuState = MutableStateFlow<MenuState>(Home(
+        slots = emptyList(),
+        categories = emptyList(),
+        allFeeds = emptyList()
+    ))
     val menuState: StateFlow<MenuState> = _menuState
 
     private val _feeds = MutableStateFlow<List<PodcastFeed>>(emptyList())
@@ -107,7 +110,18 @@ class MenuViewModel(
             _feeds.value = podcastRepository.getFeeds()
             _categories.value = podcastRepository.getCategories()
             restoreSlots()   // after feeds exist
+
+            // Start at Home screen after loading data
+            _menuState.value = Home(
+                slots = _slots.value,
+                categories = sortedCategories(),
+                allFeeds = _feeds.value
+            )
+
+            println("Loaded slots: ${_slots.value}")
+            println("Home created with slots: ${_slots.value.size}")
         }
+
     }
 
     // Effect handler that executes side effects emitted by menu state transitions
@@ -262,17 +276,10 @@ class MenuViewModel(
     // Click Wheel Center Button
     // -----------------------------
     fun confirmSelection() {
-        val current = _menuState.value
-
-        if (current is Play || current is EpisodeDetail || current is NowPlaying
-            || current is Download || current is Categories || current is Feeds || current is Episodes) {
-            dispatch(MenuEvent.Confirm)
-        } else {
-            _menuState.value = current.onConfirm(actions = this)
-        }
+        dispatch(MenuEvent.Confirm)
     }
 
-    override fun buildDownloadState(): Download {
+    fun buildDownloadState(): Download {
         return Download(
             slots = _slots.value,
             maxSlots = MAX_SLOT_SIZE,
@@ -282,7 +289,7 @@ class MenuViewModel(
         )
     }
 
-    override fun buildCategoriesState(): Categories {
+    fun buildCategoriesState(): Categories {
         return Categories(
             categories = sortedCategories(),
             allFeeds = _feeds.value,
@@ -292,72 +299,12 @@ class MenuViewModel(
         )
     }
 
-    override fun buildEpisodesState(
-        feedIndex: Int,
-        categoryName: String,
-    ): Episodes {
-
-        val feed = _feeds.value[feedIndex]
-
-        return Episodes(
-            episodes = feed.episodes,
-            feedIndex = feedIndex,
-            categoryName = categoryName,
-            slots = _slots.value,
-            selectedIndex = 0
-        )
-    }
-
-    override fun buildEpisodeDetailState(
-        feedIndex: Int,
-        episodeIndex: Int,
-        episode: PodcastEpisode,
-        origin: Origin,
-    ): EpisodeDetail {
-
-        val alreadyDownloaded = _slots.value.any {
-            it.feedIndex == feedIndex &&
-                    it.episodeIndex == episodeIndex
-        }
-
-        val primaryAction = when {
-            origin == DOWNLOAD -> ActionRow.Delete
-
-            origin == EPISODES &&
-                    alreadyDownloaded -> ActionRow.AlreadyDownloaded
-
-            else -> ActionRow.Download
-        }
-
-        return EpisodeDetail(
-            feedIndex = feedIndex,
-            episodeIndex = episodeIndex,
-            episode = episode,
-            actionRows = listOf(primaryAction),
-            origin = origin
-        )
-    }
-
-    override fun buildPlayState(): Play {
+    fun buildPlayState(): Play {
         return Play(
             slots = _slots.value,
             selectedIndex = 0
         )
     }
-
-    override fun buildNowPlayingState(slot: SlotState): NowPlaying {
-        return NowPlaying(
-            slot = slot,
-            durationMs = 0L,
-            positionMs = 0L,
-            isPlaying = false
-        )
-    }
-
-    override fun feedIndexOf(feed: PodcastFeed): Int {
-        return _feeds.value.indexOf(feed)
-    }
-
 
     fun startDownload(state: EpisodeDetail) {
         if (state.isDownloading) return
@@ -423,7 +370,7 @@ class MenuViewModel(
 
             DownloadResult.Success(file.name)
 
-        } catch (e: CancellationException) {
+        } catch (_: CancellationException) {
             DownloadResult.Cancelled
 
         } catch (e: Exception) {
@@ -469,7 +416,11 @@ class MenuViewModel(
     }
 
     fun onMenuLongPress() {
-        setState(Home())
+        setState(Home(
+            slots = _slots.value,
+            categories = sortedCategories(),
+            allFeeds = _feeds.value
+        ))
     }
 
     fun goUp(): MenuState {
@@ -477,9 +428,17 @@ class MenuViewModel(
 
             is Home -> state
 
-            is Download -> Home()
+            is Download -> Home(
+                slots = _slots.value,
+                categories = sortedCategories(),
+                allFeeds = _feeds.value
+            )
 
-            is Categories -> Home()
+            is Categories -> Home(
+                slots = _slots.value,
+                categories = sortedCategories(),
+                allFeeds = _feeds.value
+            )
 
             is Feeds -> buildCategoriesState()
 
@@ -508,7 +467,12 @@ class MenuViewModel(
                 }
             }
 
-            is Play -> Home(selectedIndex = 1)
+            is Play -> Home(
+                slots = _slots.value,
+                categories = sortedCategories(),
+                allFeeds = _feeds.value,
+                selectedIndex = 1
+            )
 
             is NowPlaying -> {
                 dispatch(MenuEvent.MenuShortPress)
@@ -577,35 +541,32 @@ class MenuViewModel(
         }
     }
 
-    private fun restoreSlots() {
-        viewModelScope.launch {
-            val persisted = slotRepository.loadSlots()
+    private suspend fun restoreSlots() {
+        val persisted = slotRepository.loadSlots()
 
-            _slots.value = persisted.mapNotNull { p ->
+        _slots.value = persisted.mapNotNull { p ->
 
-                if (!storage.fileExists(p.fileName)) {
-                    return@mapNotNull null
-                }
+            if (!storage.fileExists(p.fileName)) {
+                return@mapNotNull null
+            }
 
-                val feed = _feeds.value.getOrNull(p.feedIndex)
-                    ?: return@mapNotNull null
+            val feed = _feeds.value.getOrNull(p.feedIndex)
+                ?: return@mapNotNull null
 
-                val episode = feed.episodes
-                    .firstOrNull { it.id == p.episodeId }
-                    ?: return@mapNotNull null
+            val episode = feed.episodes
+                .firstOrNull { it.id == p.episodeId }
+                ?: return@mapNotNull null
 
-                SlotState(
-                    feedIndex = p.feedIndex,
-                    feedName = p.feedName,
-                    episodeIndex = p.episodeIndex,
-                    loadedEpisode = episode,
-                    fileName = p.fileName
-                )
-            }.take(MAX_SLOT_SIZE)
+            SlotState(
+                feedIndex = p.feedIndex,
+                feedName = p.feedName,
+                episodeIndex = p.episodeIndex,
+                loadedEpisode = episode,
+                fileName = p.fileName
+            )
+        }.take(MAX_SLOT_SIZE)
 
-            persistSlots()
-
-        }
+        persistSlots()
     }
 
     //----------------
@@ -636,25 +597,6 @@ class MenuViewModel(
             selectedIndex = 0)
         )
     }
-}
-
-interface MenuActions {
-    fun buildDownloadState(): MenuState
-    fun buildCategoriesState(): MenuState
-    fun buildEpisodesState(feedIndex: Int, categoryName: String): MenuState
-    fun buildEpisodeDetailState(
-        feedIndex: Int,
-        episodeIndex: Int,
-        episode: PodcastEpisode,
-        origin: Origin,
-    ): MenuState
-
-    fun buildPlayState(): MenuState
-
-    fun buildNowPlayingState(slot: SlotState): NowPlaying
-
-    fun feedIndexOf(feed: PodcastFeed): Int
-
 }
 
 sealed class DownloadResult {
