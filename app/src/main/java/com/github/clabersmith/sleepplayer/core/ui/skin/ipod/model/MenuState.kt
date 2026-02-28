@@ -1,37 +1,36 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
-import com.github.clabersmith.sleepplayer.features.podcasts.domain.DownloadConstants.MAX_SLOT_SIZE
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 
 sealed class MenuState() {
+    abstract val context: MenuContext
 
     abstract val selectedIndex: Int
     abstract val itemCount: Int
 
     abstract val title: String
 
-    open fun reduce(event: MenuEvent): MenuTransition {
-        return MenuTransition(this)
-    }
+    abstract fun reduce(event: MenuEvent): MenuTransition
 
     abstract fun copyWithIndex(newIndex: Int): MenuState
 
+    abstract fun withContext(context: MenuContext): MenuState
+
     data class Home(
-        val slots: List<SlotState>,
-        val categories: List<String>,
-        val allFeeds: List<PodcastFeed>,
+        override val context: MenuContext,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        override val itemCount: Int get() = 4
+        override val itemCount: Int get() = 3
 
         override val title = "Home"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
+        override fun withContext(context: MenuContext) = copy(context = context)
+
         override fun reduce(event: MenuEvent): MenuTransition {
-            println("Home slots when navigating to Play: ${slots.size}")
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -39,17 +38,14 @@ sealed class MenuState() {
 
                         0 -> MenuTransition(
                             newState = Download(
-                                slots = slots,
-                                maxSlots = MAX_SLOT_SIZE,
-                                categories = categories,
-                                allFeeds = allFeeds,
+                                context,
                                 selectedIndex = 0
                             )
                         )
 
                         1 -> MenuTransition(
                             newState = Play(
-                                slots = slots,
+                                context,
                                 selectedIndex = 0
                             )
                         )
@@ -60,49 +56,50 @@ sealed class MenuState() {
 
                 else -> MenuTransition(this)
             }
+
         }
     }
 
     data class Download(
-        val slots: List<SlotState>,
-        val maxSlots: Int,
-        val categories: List<String>,
-        val allFeeds: List<PodcastFeed>,
+        override val context: MenuContext,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
         override val itemCount: Int
-            get() = slots.size + if (slots.size < maxSlots) 1 else 0
+            get() = context.slots.size + if (context.slots.size < context.maxSlotsCount) 1 else 0
 
         override val title = "Downloads"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
             return when (event) {
 
                 MenuEvent.Confirm -> {
 
-                    val slotCount = slots.size
-                    val hasAddNew = slotCount < maxSlots
+                    val slotCount = context.slots.size
+                    val hasAddNew = slotCount < context.maxSlotsCount
                     val addNewIndex = slotCount
+
+                    println("hasAddNew: $hasAddNew, addNewIndex: $addNewIndex, selectedIndex: $selectedIndex")
 
                     when {
                         hasAddNew && selectedIndex == addNewIndex ->
                             MenuTransition(
                                 newState = Categories(
-                                    categories = categories,
-                                    allFeeds = allFeeds,
-                                    slots = slots,
+                                    context = context,
                                     selectedIndex = 0
                                 )
                             )
 
                         else -> {
-                            val slot = slots[selectedIndex]
+                            val slot = context.slots[selectedIndex]
 
                             MenuTransition(
                                 newState = EpisodeDetail(
+                                    context,
                                     feedIndex = slot.feedIndex,
                                     episodeIndex = slot.episodeIndex,
                                     episode = slot.loadedEpisode,
@@ -115,6 +112,10 @@ sealed class MenuState() {
                     }
                 }
 
+                MenuEvent.Back -> MenuTransition(
+                    Home(context)
+                )
+
                 else ->
                     MenuTransition(this)
             }
@@ -122,37 +123,45 @@ sealed class MenuState() {
     }
 
     data class Categories(
-        val categories: List<String>,
-        val allFeeds: List<PodcastFeed>,
-        val slots: List<SlotState>,
+        override val context: MenuContext,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        override val itemCount: Int get() = categories.size
+        override val itemCount: Int get() = context.categories.size
 
         override val title = "Categories"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
+        override fun withContext(context: MenuContext) = copy(context = context)
+
         override fun reduce(event: MenuEvent): MenuTransition {
             return when (event) {
 
                 MenuEvent.Confirm -> {
-                    val category = categories[selectedIndex]
+                    val category = context.categories[selectedIndex]
 
-                    val categoryFeeds = allFeeds
+                    println("feeds ${context.feeds} category $category")
+
+                    val categoryFeeds = context.feeds
                         .filter { it.category == category }
 
                     MenuTransition(
                         newState = Feeds(
-                            categoryFeeds = categoryFeeds,
-                            allFeeds = allFeeds,
-                            slots = slots,
+                            context = context,
                             categoryName = category,
+                            categoryFeeds = categoryFeeds,
                             selectedIndex = 0
                         )
                     )
                 }
+
+                MenuEvent.Back -> MenuTransition(
+                    Download(
+                        context,
+                        selectedIndex = 0
+                    )
+                )
 
                 else ->
                     MenuTransition(this)
@@ -161,56 +170,65 @@ sealed class MenuState() {
     }
 
     data class Feeds(
+        override val context: MenuContext,
         val categoryName: String,
         val categoryFeeds: List<PodcastFeed>,
-        val allFeeds: List<PodcastFeed>,
-        val slots: List<SlotState>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
         override val itemCount: Int get() = categoryFeeds.size
 
-        override val title = categoryName
+        override val title = "$categoryName Podcasts"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
             return when (event) {
 
                 MenuEvent.Confirm -> {
                     val selectedFeed = categoryFeeds[selectedIndex]
-                    val feedIndex = allFeeds.indexOf(selectedFeed)
+                    val feedIndex = context.feeds.indexOf(selectedFeed)
 
                     MenuTransition(
                         newState = Episodes(
+                            context = context,
                             feedIndex = feedIndex,
-                            categoryName = categoryName,
                             episodes = selectedFeed.episodes,
-                            slots = slots,
+                            categoryFeeds = categoryFeeds,
+
                             selectedIndex = 0
                         )
                     )
                 }
 
-                else ->
-                    MenuTransition(this)
+                MenuEvent.Back -> MenuTransition(
+                    Categories(
+                        context
+                    )
+                )
+
+                else -> MenuTransition(this)
             }
         }
     }
 
     data class Episodes(
+        override val context: MenuContext,
         val feedIndex: Int,
         val episodes: List<PodcastEpisode>,
-        val categoryName: String?,
-        val slots: List<SlotState>,
+        val categoryFeeds: List<PodcastFeed>,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
         override val itemCount: Int get() = episodes.size
 
-        override val title = "Episodes"
+        override val title = "Podcast Episodes"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
             return when (event) {
@@ -219,7 +237,7 @@ sealed class MenuState() {
                     val episode = episodes[selectedIndex]
 
                     val alreadyDownloaded =
-                        slots.any {
+                        context.slots.any {
                             it.feedIndex == feedIndex &&
                                     it.episodeIndex == selectedIndex
                         }
@@ -232,6 +250,7 @@ sealed class MenuState() {
 
                     MenuTransition(
                         newState = EpisodeDetail(
+                            context = context,
                             feedIndex = feedIndex,
                             episodeIndex = selectedIndex,
                             episode = episode,
@@ -242,6 +261,14 @@ sealed class MenuState() {
                     )
                 }
 
+                MenuEvent.Back -> MenuTransition(
+                    Feeds(
+                        context = context,
+                        categoryName = context.feeds[feedIndex].category,
+                        categoryFeeds = categoryFeeds,
+                    )
+                )
+
                 else ->
                     MenuTransition(this)
             }
@@ -249,6 +276,7 @@ sealed class MenuState() {
     }
 
     data class EpisodeDetail(
+        override val context: MenuContext,
         val feedIndex: Int,
         val episodeIndex: Int,
         val episode: PodcastEpisode,
@@ -259,11 +287,14 @@ sealed class MenuState() {
     ) : MenuState() {
         override val itemCount: Int get() = actionRows.size
 
-        override val title = "Episode"
+        override val title = "Episode Detail"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
+        override fun withContext(context: MenuContext) = copy(context = context)
+
         override fun reduce(event: MenuEvent): MenuTransition {
+            println("EpisodeDetail $event, origin: $origin")
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -272,7 +303,6 @@ sealed class MenuState() {
                         ?: return MenuTransition(this)
 
                     when (action) {
-
                         ActionRow.Download ->
                             MenuTransition(
                                 newState = copy(
@@ -302,15 +332,31 @@ sealed class MenuState() {
 
                         ActionRow.Delete ->
                             MenuTransition(
-                                newState = this, // temporary
+                                newState = Download(context, selectedIndex = 0),
                                 effects = listOf(
-                                    MenuEffect.DeleteEpisode(this),
-                                    MenuEffect.BuildDownloadState
+                                    MenuEffect.DeleteEpisode(this)
                                 )
                             )
 
-                        else ->
-                            MenuTransition(this)
+                        else -> MenuTransition(this)
+                    }
+                }
+
+                MenuEvent.Back -> {
+                    when (origin) {
+                        Origin.DOWNLOAD -> MenuTransition(
+                            Download(context)
+                        )
+
+                        Origin.EPISODES -> MenuTransition(
+                            Episodes(
+                                context = context,
+                                feedIndex = feedIndex,
+                                episodes = context.feeds[feedIndex].episodes,
+                                categoryFeeds = context.feeds.filter { it.category == context.feeds[feedIndex].category },
+                                selectedIndex = episodeIndex
+                            )
+                        )
                     }
                 }
 
@@ -326,23 +372,26 @@ sealed class MenuState() {
     }
 
     data class Play(
-        val slots: List<SlotState>,
+        override val context: MenuContext,
         override val selectedIndex: Int = 0
     ) : MenuState() {
-        override val itemCount: Int get() = slots.size
+        override val itemCount: Int get() = context.slots.size
 
         override val title = "Play"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
+        override fun withContext(context: MenuContext) = copy(context = context)
+
         override fun reduce(event: MenuEvent): MenuTransition {
             return when (event) {
 
                 MenuEvent.Confirm -> {
-                    val slot = slots[selectedIndex]
+                    val slot = context.slots[selectedIndex]
 
                     MenuTransition(
                         newState = NowPlaying(
+                            context = context,
                             slot = slot,
                             durationMs = 0L,
                             positionMs = 0L,
@@ -352,12 +401,19 @@ sealed class MenuState() {
                     )
                 }
 
+                MenuEvent.Back -> {
+                    MenuTransition(
+                        newState = Home(context),
+                    )
+                }
+
                 else -> MenuTransition(this)
             }
         }
     }
 
     data class NowPlaying(
+        override val context: MenuContext,
         val slot: SlotState,
         val durationMs: Long,
         val positionMs: Long,
@@ -367,6 +423,8 @@ sealed class MenuState() {
         override val itemCount: Int = 1
 
         override val title = "Now Playing"
+
+        override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
             return when (event) {
@@ -412,12 +470,11 @@ sealed class MenuState() {
                         effects = listOf(MenuEffect.StopScan)
                     )
 
-                MenuEvent.MenuShortPress ->
+                MenuEvent.Back ->
                     MenuTransition(
-                        newState = this, // placeholder until we build the actual menu state
+                        newState = Play(context, selectedIndex = 0),
                         effects = listOf(
-                            MenuEffect.StopPlayback,
-                            MenuEffect.ExitNowPlaying
+                            MenuEffect.StopPlayback
                         )
                     )
 

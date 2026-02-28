@@ -7,7 +7,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 fun CategoryMenu(
     state: MenuState.Categories
 ) {
-        val items = state.categories
+        val items = state.context.categories
 
     MenuList(
         items = items,

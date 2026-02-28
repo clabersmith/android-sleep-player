@@ -36,11 +36,9 @@ class MenuEffectHandler(
     private val startDownload: (state: EpisodeDetail) -> Unit,
     private val cancelDownload: (state: EpisodeDetail) -> Unit,
     private val deleteEpisode: (state: EpisodeDetail) -> Unit,
-    private val buildDownloadState: () -> Unit,
     private val startScanForward: () -> Unit,
     private val startScanBack: () -> Unit,
     private val stopScan: () -> Unit,
-    private val navigateToPlay: () -> Unit
 ) {
     fun handle(effect: MenuEffect) {
         when (effect) {
@@ -85,12 +83,6 @@ class MenuEffectHandler(
             is MenuEffect.DeleteEpisode ->
                 deleteEpisode(effect.state)
 
-            is MenuEffect.BuildDownloadState ->
-                buildDownloadState()
-
-            MenuEffect.ExitNowPlaying -> {
-                navigateToPlay()
-            }
         }
     }
 }

@@ -16,7 +16,6 @@ sealed interface MenuEffect {
     data class StartDownload(val state: EpisodeDetail) : MenuEffect
     data class CancelDownload(val state: EpisodeDetail) : MenuEffect
     data class DeleteEpisode(val state: EpisodeDetail) : MenuEffect
-    object BuildDownloadState : MenuEffect
 
     // -----------------------------
     // Playback effects
@@ -36,9 +35,4 @@ sealed interface MenuEffect {
     object StartScanForward : MenuEffect
     object StartScanBack : MenuEffect
     object StopScan : MenuEffect
-
-    // -----------------------------
-    // Navigation effects
-
-    object ExitNowPlaying : MenuEffect
 }

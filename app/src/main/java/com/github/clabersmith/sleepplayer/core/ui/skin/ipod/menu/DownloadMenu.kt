@@ -7,11 +7,11 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 fun DownloadMenu(
     state: MenuState.Download
 ) {
-    val slotTitles = state.slots.map {
+    val slotTitles = state.context.slots.map {
         it.loadedEpisode.title
     }
 
-    val hasAddNew = state.slots.size < state.maxSlots
+    val hasAddNew = state.context.slots.size < state.context.maxSlotsCount
 
     val items = buildList {
         addAll(slotTitles)

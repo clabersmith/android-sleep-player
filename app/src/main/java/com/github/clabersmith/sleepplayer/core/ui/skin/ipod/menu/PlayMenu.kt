@@ -7,7 +7,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 fun PlayMenu(
     state: MenuState.Play
 ) {
-    val slotTitles = state.slots.map {
+    val slotTitles = state.context.slots.map {
         it.loadedEpisode.title
     }
 

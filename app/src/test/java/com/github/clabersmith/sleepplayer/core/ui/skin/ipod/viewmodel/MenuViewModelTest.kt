@@ -53,7 +53,6 @@ class MenuViewModelTest() {
 
     @Test
     fun `loads feeds on init`() = runTest {
-
         val viewModel = createNewViewModel()
         advanceUntilIdle()  // Wait for load/init to complete
 
@@ -81,21 +80,21 @@ class MenuViewModelTest() {
 
     @Test
     fun `rotate backward wraps to last index`() = runTest {
-        val viewModel = createNewViewModel()
+        val viewModel = createNewViewModel()  // Home menu has 3 items, so index 0-2
         advanceUntilIdle()
 
         viewModel.moveSelection(-1)
 
         val state = viewModel.menuState.value
-        assertEquals(3, state.selectedIndex)
+        assertEquals(2, state.selectedIndex)
     }
 
     @Test
     fun `forward wrap goes to zero`() = runTest {
-        val viewModel = createNewViewModel()
+        val viewModel = createNewViewModel() // Home menu has 3 items, so index 0-2
         advanceUntilIdle()
 
-        viewModel.moveSelection(3)
+        viewModel.moveSelection(2)
         viewModel.moveSelection(1)
 
         assertEquals(0, viewModel.menuState.value.selectedIndex)
@@ -103,6 +102,7 @@ class MenuViewModelTest() {
 
     @Test
     fun `moveSelection ignored in episode detail`() = runTest {
+        persistFakeSlot()
         val viewModel = createNewViewModel()
         advanceUntilIdle()
 
@@ -147,7 +147,7 @@ class MenuViewModelTest() {
         advanceUntilIdle() // wait for download to complete
 
         val state = viewModel.menuState.value as MenuState.Download
-        assertEquals(1, state.slots.size)
+        assertEquals(1, state.context.slots.size)
     }
 
     @Test
@@ -176,6 +176,7 @@ class MenuViewModelTest() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `cancel download returns to non-downloading state`() = runTest {
+        persistFakeSlot()
         val fakeDownloaderHanging = FakeDownloaderHanging()
         val viewModel = createNewViewModel(fakeDownloaderHanging)
         advanceUntilIdle()
@@ -196,6 +197,7 @@ class MenuViewModelTest() {
 
     @Test
     fun `cancel download does not add slot`() = runTest {
+        persistFakeSlot()
         val fakeDownloaderHanging = FakeDownloaderHanging()
         val viewModel = createNewViewModel(fakeDownloaderHanging)
         advanceUntilIdle()
@@ -232,6 +234,7 @@ class MenuViewModelTest() {
 
     @Test
     fun `failed download does not add slot`() = runTest {
+        persistFakeSlot()
         val fakeDownloaderFailing = FakeDownloaderFailing()
         val viewModel = createNewViewModel(fakeDownloaderFailing)
         advanceUntilIdle()
@@ -261,12 +264,14 @@ class MenuViewModelTest() {
         click(viewModel)
 
         val state = viewModel.menuState.value as MenuState.Download
-        assertEquals(0, state.slots.size)
+        assertEquals(0, state.context.slots.size)
     }
 
     @Test
     fun `delete calls storage deleteFile`() = runTest {
         val viewModel = createNewViewModel()
+        persistFakeSlot()
+
         advanceUntilIdle()
 
         navigateToEpisodeDetailDownload(viewModel)
@@ -295,7 +300,7 @@ class MenuViewModelTest() {
 
         val state = viewModel.menuState.value as MenuState.Download
 
-        assertEquals(1, state.slots.size)
+        assertEquals(1, state.context.slots.size)
     }
 
     @Test
@@ -305,7 +310,12 @@ class MenuViewModelTest() {
 
         advanceUntilIdle()
 
+        println("test context.slots: ${viewModel.menuState.value.context.slots}")
+        println("test context.slots.size: ${viewModel.menuState.value.context.slots.size}")
+
         navigateToNowPlaying(viewModel)
+
+        advanceUntilIdle()
 
         viewModel.onPlayPausePressed()
 

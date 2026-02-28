@@ -8,10 +8,9 @@ fun HomeMenu(
     state: MenuState.Home
 ) {
     val items = listOf(
-        "Download",
+        "Podcasts",
         "Play",
-        "Settings",
-        "Exit"
+        "Settings"
     )
 
     MenuList(
