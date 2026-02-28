@@ -18,8 +18,8 @@ sealed interface MenuEvent {
     data object Confirm : MenuEvent
 
     // Menu button
-    data object Back : MenuEvent
-    data object Home : MenuEvent
+    data object MenuShortPress : MenuEvent
+    data object MenuLongPress : MenuEvent
 
     // Play / Pause button
     data object PlayPause : MenuEvent

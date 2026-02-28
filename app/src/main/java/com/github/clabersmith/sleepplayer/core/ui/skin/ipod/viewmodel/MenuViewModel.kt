@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuContext
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
@@ -390,11 +389,11 @@ class MenuViewModel(
     // Menu Button (Click Wheel Back
     // -----------------------------
     fun onMenuShortPress() {
-        dispatch(MenuEvent.Back)
+        dispatch(MenuEvent.MenuShortPress)
     }
 
     fun onMenuLongPress() {
-        setState(MenuState.Home(context))
+        dispatch(MenuEvent.MenuLongPress)
     }
 
     // -----------------------------

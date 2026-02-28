@@ -17,6 +17,7 @@ sealed class MenuState() {
 
     abstract fun withContext(context: MenuContext): MenuState
 
+
     data class Home(
         override val context: MenuContext,
         override val selectedIndex: Int = 0
@@ -24,7 +25,7 @@ sealed class MenuState() {
 
         override val itemCount: Int get() = 3
 
-        override val title = "Home"
+        override val title = "Menu"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
@@ -112,7 +113,11 @@ sealed class MenuState() {
                     }
                 }
 
-                MenuEvent.Back -> MenuTransition(
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    Home(context)
+                )
+
+                MenuEvent.MenuLongPress -> MenuTransition(
                     Home(context)
                 )
 
@@ -156,11 +161,15 @@ sealed class MenuState() {
                     )
                 }
 
-                MenuEvent.Back -> MenuTransition(
+                MenuEvent.MenuShortPress -> MenuTransition(
                     Download(
                         context,
                         selectedIndex = 0
                     )
+                )
+
+                MenuEvent.MenuLongPress -> MenuTransition(
+                    Home(context)
                 )
 
                 else ->
@@ -203,10 +212,14 @@ sealed class MenuState() {
                     )
                 }
 
-                MenuEvent.Back -> MenuTransition(
+                MenuEvent.MenuShortPress -> MenuTransition(
                     Categories(
                         context
                     )
+                )
+
+                MenuEvent.MenuLongPress -> MenuTransition(
+                    Home(context)
                 )
 
                 else -> MenuTransition(this)
@@ -261,12 +274,16 @@ sealed class MenuState() {
                     )
                 }
 
-                MenuEvent.Back -> MenuTransition(
+                MenuEvent.MenuShortPress -> MenuTransition(
                     Feeds(
                         context = context,
                         categoryName = context.feeds[feedIndex].category,
                         categoryFeeds = categoryFeeds,
                     )
+                )
+
+                MenuEvent.MenuLongPress -> MenuTransition(
+                    Home(context)
                 )
 
                 else ->
@@ -342,7 +359,7 @@ sealed class MenuState() {
                     }
                 }
 
-                MenuEvent.Back -> {
+                MenuEvent.MenuShortPress -> {
                     when (origin) {
                         Origin.DOWNLOAD -> MenuTransition(
                             Download(context)
@@ -359,6 +376,10 @@ sealed class MenuState() {
                         )
                     }
                 }
+
+                MenuEvent.MenuLongPress -> MenuTransition(
+                    Home(context)
+                )
 
                 else ->
                     MenuTransition(this)
@@ -401,11 +422,15 @@ sealed class MenuState() {
                     )
                 }
 
-                MenuEvent.Back -> {
+                MenuEvent.MenuShortPress -> {
                     MenuTransition(
                         newState = Home(context),
                     )
                 }
+
+                MenuEvent.MenuLongPress -> MenuTransition(
+                    Home(context)
+                )
 
                 else -> MenuTransition(this)
             }
@@ -470,13 +495,20 @@ sealed class MenuState() {
                         effects = listOf(MenuEffect.StopScan)
                     )
 
-                MenuEvent.Back ->
+                MenuEvent.MenuShortPress ->
                     MenuTransition(
                         newState = Play(context, selectedIndex = 0),
                         effects = listOf(
                             MenuEffect.StopPlayback
                         )
                     )
+
+                MenuEvent.MenuLongPress -> {
+                    MenuTransition(
+                        newState = Home(context),
+                        effects = listOf(MenuEffect.StopPlayback)
+                    )
+                }
 
                 else -> MenuTransition(this)
             }
