@@ -61,7 +61,7 @@ fun Header(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 6.dp),
-                tint = IpodTextPrimary
+                tint = Color.Unspecified
             )
         }
 

@@ -1,6 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu
 
 import androidx.compose.runtime.Composable
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 
 @Composable
@@ -14,10 +15,10 @@ fun DownloadMenu(
     val hasAddNew = state.context.slots.size < state.context.maxSlotsCount
 
     val items = buildList {
-        addAll(slotTitles)
+        addAll(slotTitles.map { MenuItem(title = it) })
 
         if (hasAddNew) {
-            add("Add New")
+            add(MenuItem(title = "Add New", showChevron = true))
         }
     }
 

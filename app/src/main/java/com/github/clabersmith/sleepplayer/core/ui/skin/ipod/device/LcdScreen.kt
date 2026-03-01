@@ -36,7 +36,7 @@ fun LcdScreen(
 
         val scaleX = maxWidth / baseWidth
         val scaleY = maxHeight / baseHeight
-        val scale = min(scaleX, scaleY).coerceAtMost(1.4f)
+        val scale = min(scaleX, scaleY).coerceAtMost(1.3f)
 
         LcdSurface(
             modifier = Modifier.size(

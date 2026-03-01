@@ -12,10 +12,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.MenuRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 
 @Composable
 fun MenuList(
-    items: List<String>,
+    items: List<MenuItem>,
     selectedIndex: Int
 ) {
     val listState = rememberLazyListState()
@@ -53,7 +54,7 @@ fun MenuList(
             val isSelected = index == selectedIndex
 
             MenuRow(
-                text = item,
+                item = item,
                 selected = isSelected
             )
 

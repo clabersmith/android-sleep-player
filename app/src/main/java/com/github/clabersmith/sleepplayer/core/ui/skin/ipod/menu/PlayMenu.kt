@@ -1,14 +1,15 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu
 
 import androidx.compose.runtime.Composable
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 
 @Composable
 fun PlayMenu(
     state: MenuState.Play
 ) {
-    val slotTitles = state.context.slots.map {
-        it.loadedEpisode.title
+    val slotTitles: List<MenuItem> = state.context.slots.map {
+        MenuItem(title = it.loadedEpisode.title)
     }
 
     val items = buildList {

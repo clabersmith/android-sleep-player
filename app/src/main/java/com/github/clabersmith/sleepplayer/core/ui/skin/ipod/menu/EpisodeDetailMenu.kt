@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.MenuRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
@@ -75,7 +76,7 @@ fun EpisodeDetailMenu(
 
                 is ActionRow.Download -> {
                     MenuRow(
-                        text = "Download",
+                        item = MenuItem(title = "Download"),
                         selected = isSelected
                     )
                 }
@@ -90,21 +91,21 @@ fun EpisodeDetailMenu(
 
                 is ActionRow.Cancel -> {
                     MenuRow(
-                        text = "Cancel",
+                        item = MenuItem(title = "Cancel"),
                         selected = isSelected
                     )
                 }
 
                 is ActionRow.Delete -> {
                     MenuRow(
-                        text = "Delete",
+                        item = MenuItem(title = "Delete"),
                         selected = isSelected
                     )
                 }
 
                 is ActionRow.AlreadyDownloaded -> {
                     MenuRow(
-                        text = "Already Downloaded",
+                        item = MenuItem(title = "Already Downloaded"),
                         selected = false
                     )
                 }

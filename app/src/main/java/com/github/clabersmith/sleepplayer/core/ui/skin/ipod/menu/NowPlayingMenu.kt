@@ -73,7 +73,7 @@ fun NowPlayingMenu(
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
 
-        Spacer(Modifier.height(52.dp))
+        Spacer(Modifier.height(80.dp))
 
         // Progress bar
         LcdProgressBar(
@@ -105,7 +105,7 @@ fun NowPlayingMenu(
 @Composable
 fun LcdProgressBar(progress: Float) {
     val p = progress.coerceIn(0f, 1f)
-    val corner = 5.dp
+    val corner = 10.dp
     val outerShape = androidx.compose.foundation.shape.RoundedCornerShape(corner)
 
     Box(

@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -50,19 +51,27 @@ fun ClickWheel(
     onScanForwardUp: () -> Unit,
     onScanBackDown: () -> Unit,
     onScanBackUp: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier
 ) {
 
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(modifier =
+        modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
 
         val baseSize = 240.dp
 
-        val scale = (minOf(maxWidth, maxHeight) / baseSize)
-            .coerceAtMost(1.3f)
+        // Use the smaller dimension so it fits on any screen orientation
+        val availableSize = minOf(maxWidth, maxHeight)
+
+        // Remove the coerceAtMost cap — let it scale freely
+        val scale = availableSize / baseSize
+
+//        val currentMax = minOf(maxWidth, maxHeight)
+//        val scale = (currentMax.value / baseSize.value).coerceAtMost(1.3f)
 
 
         val wheelSize = baseSize * scale
-
         val centerSize = 80.dp * scale
 
         Box(
@@ -269,6 +278,7 @@ fun ClickWheel(
         }
     }
 }
+
 
 suspend fun PointerInputScope.detectCircularGestures(
     onRotateStep: (Int) -> Unit

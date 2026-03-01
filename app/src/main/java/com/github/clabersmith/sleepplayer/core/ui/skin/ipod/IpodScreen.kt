@@ -5,11 +5,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -50,6 +54,8 @@ fun IpodScreen(
         soundPool.load(context, R.raw.ipod_click, 1)
     }
 
+    var size by remember { mutableStateOf(280f) }
+
     DisposableEffect(soundPool) {
         onDispose {
             soundPool.release()
@@ -80,7 +86,7 @@ fun IpodScreen(
         ClickWheel(
             bodyColor = bodyColor,
             textColor = wheelTextColor,
-            modifier = Modifier.size(280.dp),
+            modifier = Modifier.size(size.dp),
 
             onRotate = { delta ->
                 viewModel.moveSelection(delta)
@@ -122,6 +128,12 @@ fun IpodScreen(
                 playClick()
             }
         )
+//        Slider(
+//            value = size,
+//            onValueChange = { size = it },
+//            valueRange = 100f..400f
+//        )
+//        Text("Size: ${size.toInt()}dp")
 
         Spacer(Modifier.height(32.dp))
     }

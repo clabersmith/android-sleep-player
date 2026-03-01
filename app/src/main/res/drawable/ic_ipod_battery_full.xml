@@ -1,60 +1,69 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="26dp"
-    android:height="14dp"
-    android:viewportWidth="26"
-    android:viewportHeight="14">
+    android:width="30.8dp"
+    android:height="16.2dp"
+    android:viewportWidth="28.6"
+    android:viewportHeight="12.6">
 
-    <!-- 1) WHITE OUTER BEZEL -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="
-            M2,2
-            h18
-            a2,2 0 0 1 2,2
-            v6
-            a2,2 0 0 1 -2,2
-            h-18
-            a2,2 0 0 1 -2,-2
-            v-6
-            a2,2 0 0 1 2,-2
+            M2.2,1.8
+            h19.8
+            a2.2,1.8 0 0 1 2.2,1.8
+            v5.4
+            a2.2,1.8 0 0 1 -2.2,1.8
+            h-19.8
+            a2.2,1.8 0 0 1 -2.2,-1.8
+            v-5.4
+            a2.2,1.8 0 0 1 2.2,-1.8
             z" />
 
-    <!-- 2) THIN DARK RING (this makes bezel visible on bright LCD) -->
-    <path
-        android:fillColor="#2E2A5C"
-        android:pathData="
-            M2.8,2.8
-            h16.4
-            a1.6,1.6 0 0 1 1.6,1.6
-            v5.2
-            a1.6,1.6 0 0 1 -1.6,1.6
-            h-16.4
-            a1.6,1.6 0 0 1 -1.6,-1.6
-            v-5.2
-            a1.6,1.6 0 0 1 1.6,-1.6
-            z" />
-
-    <!-- 3) INNER FILL -->
-    <path
-        android:fillColor="#2E2A5C"
-        android:pathData="
-            M3.6,3.6
-            h14.8
-            a1.2,1.2 0 0 1 1.2,1.2
-            v4.4
-            a1.2,1.2 0 0 1 -1.2,1.2
-            h-14.8
-            a1.2,1.2 0 0 1 -1.2,-1.2
-            v-4.4
-            a1.2,1.2 0 0 1 1.2,-1.2
-            z" />
-
-    <!-- TERMINAL (same idea) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M21,5 h3 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-3 z" />
+        android:pathData="
+            M23.1,4.5
+            h1.39
+            a1.1,0.9 0 0 1 1.1,0.9
+            v1.8
+            a1.1,0.9 0 0 1 -1.1,0.9
+            h-1.39
+            z" />
 
     <path
-        android:fillColor="#2E2A5C"
-        android:pathData="M21.8,5.8 h2 v2.4 h-2 z" />
+        android:fillColor="#353F7E"
+        android:pathData="
+            M3.08,2.52
+            h18.04
+            a1.32,1.08 0 0 1 1.32,1.08
+            v5.4
+            a1.32,1.08 0 0 1 -1.32,1.08
+            h-18.04
+            a1.32,1.08 0 0 1 -1.32,-1.08
+            v-5.4
+            a1.32,1.08 0 0 1 1.32,-1.08
+            z" />
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#353F7E"
+        android:strokeWidth="0.6"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="
+            M2.2,1.8
+            h19.8
+            a2.2,1.8 0 0 1 2.2,1.8
+            v0.9
+            h0.955
+            a0.66,0.9 0 0 1 0.66,0.9
+            v1.8
+            a0.66,0.9 0 0 1 -0.66,0.9
+            h-0.955
+            v0.9
+            a2.2,1.8 0 0 1 -2.2,1.8
+            h-19.8
+            a2.2,1.8 0 0 1 -2.2,-1.8
+            v-5.4
+            a2.2,1.8 0 0 1 2.2,-1.8
+            z" />
 </vector>
