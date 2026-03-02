@@ -1,6 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu
 
 import androidx.compose.runtime.Composable
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.MenuRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 
@@ -16,8 +17,15 @@ fun PlayMenu(
         addAll(slotTitles)
     }
 
-    MenuList(
-        items = items,
-        selectedIndex = state.selectedIndex
-    )
+    if (items.isEmpty()) {
+        MenuRow(
+            item = MenuItem(title = "No Podcasts"),
+            selected = true
+        )
+    } else {
+        MenuList(
+            items = items,
+            selectedIndex = state.selectedIndex
+        )
+    }
 }

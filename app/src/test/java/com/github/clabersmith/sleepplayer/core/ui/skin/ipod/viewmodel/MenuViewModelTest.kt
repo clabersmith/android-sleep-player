@@ -15,7 +15,11 @@ import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderP
 import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderSuccess
 import com.github.clabersmith.sleepplayer.testutil.data.local.FakeFileStorage
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePodcastPlayer
-import com.github.clabersmith.sleepplayer.testutil.helpers.*
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.click
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownload
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownloaded
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToFeedsMenu
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToNowPlaying
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -56,12 +60,7 @@ class MenuViewModelTest() {
         val viewModel = createNewViewModel()
         advanceUntilIdle()  // Wait for load/init to complete
 
-        // Navigate Home -> Downloads
-        click(viewModel)
-        // Downloads -> Categories
-        click(viewModel)
-        // Categories -> Feeds
-        click(viewModel)
+        navigateToFeedsMenu(viewModel)
 
         val state = viewModel.menuState.value as MenuState.Feeds
         assertEquals("Test Podcast 1", state.categoryFeeds.first().title)
@@ -80,22 +79,21 @@ class MenuViewModelTest() {
 
     @Test
     fun `rotate backward wraps to last index`() = runTest {
-        val viewModel = createNewViewModel()  // Home menu has 3 items, so index 0-2
+        val viewModel = createNewViewModel()  // Home menu has 2 items, so index 0-1
         advanceUntilIdle()
 
         viewModel.moveSelection(-1)
 
         val state = viewModel.menuState.value
-        assertEquals(2, state.selectedIndex)
+        assertEquals(1, state.selectedIndex)
     }
 
     @Test
     fun `forward wrap goes to zero`() = runTest {
-        val viewModel = createNewViewModel() // Home menu has 3 items, so index 0-2
+        val viewModel = createNewViewModel() // Home menu has 2 items, so index 0-1
         advanceUntilIdle()
 
         viewModel.moveSelection(2)
-        viewModel.moveSelection(1)
 
         assertEquals(0, viewModel.menuState.value.selectedIndex)
     }
@@ -295,8 +293,11 @@ class MenuViewModelTest() {
 
         advanceUntilIdle()
 
-        viewModel.confirmSelection() // Home -> Downloads
-        advanceUntilIdle()
+        viewModel.confirmSelection() // Home -> Podcasts
+
+        viewModel.moveSelection(1) //Podcasts move to Downloads
+
+        viewModel.confirmSelection() // Podcasts -> Downloads
 
         val state = viewModel.menuState.value as MenuState.Download
 
@@ -316,6 +317,8 @@ class MenuViewModelTest() {
         navigateToNowPlaying(viewModel)
 
         advanceUntilIdle()
+
+        println("menu state: ${viewModel.menuState.value}")
 
         viewModel.onPlayPausePressed()
 
@@ -367,17 +370,49 @@ class MenuViewModelTest() {
     }
 
     @Test
-    fun `menu press stops playback`() = runTest {
+    fun `menu short press from podcasts returns to home`() = runTest {
         val viewModel = createNewViewModel()
-        persistFakeSlot()
-
         advanceUntilIdle()
 
-        navigateToNowPlaying(viewModel)
+        viewModel.confirmSelection() // Home -> Podcasts
 
         viewModel.onMenuShortPress()
 
-        assertTrue(fakePodcastPlayer.stopCalled)
+        assertTrue(viewModel.menuState.value is MenuState.Home)
+    }
+
+    @Test
+    fun `repeated menu short press from episode detail returns to home`() = runTest {
+        val viewModel = createNewViewModel()
+        advanceUntilIdle()
+
+        navigateToEpisodeDetailDownload(viewModel)
+
+        assertTrue(viewModel.menuState.value is MenuState.EpisodeDetail)
+
+        //EpisodeDetail -> Episodes -> Feeds -> Categories -> Downloads -> Podcasts -> Home
+        repeat(6) {
+            viewModel.onMenuShortPress()
+            advanceUntilIdle()
+        }
+
+        assertTrue(viewModel.menuState.value is MenuState.Home)
+    }
+
+    @Test
+    fun `single menu long press from episode detail returns to home`() = runTest {
+        val viewModel = createNewViewModel()
+        advanceUntilIdle()
+
+        navigateToEpisodeDetailDownload(viewModel)
+
+        assertTrue(viewModel.menuState.value is MenuState.EpisodeDetail)
+
+        //EpisodeDetail -> Home
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.menuState.value is MenuState.Home)
     }
 
     @Test

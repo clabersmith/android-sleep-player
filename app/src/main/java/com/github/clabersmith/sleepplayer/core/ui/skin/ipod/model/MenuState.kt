@@ -23,7 +23,7 @@ sealed class MenuState() {
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        override val itemCount: Int get() = 3
+        override val itemCount: Int get() = 2
 
         override val title = "Menu"
 
@@ -38,14 +38,7 @@ sealed class MenuState() {
                     when (selectedIndex) {
 
                         0 -> MenuTransition(
-                            newState = Download(
-                                context,
-                                selectedIndex = 0
-                            )
-                        )
-
-                        1 -> MenuTransition(
-                            newState = Play(
+                            newState = Podcasts(
                                 context,
                                 selectedIndex = 0
                             )
@@ -54,6 +47,60 @@ sealed class MenuState() {
                         else -> MenuTransition(this)
                     }
                 }
+
+                else -> MenuTransition(this)
+            }
+
+        }
+    }
+
+    data class Podcasts(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
+        override val itemCount: Int get() = 2
+
+        override val title = "Podcasts"
+
+        override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) = copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    when (selectedIndex) {
+
+                        0 -> MenuTransition(
+                            newState = Play(
+                                context,
+                                selectedIndex = 0
+                            )
+                        )
+
+                        1 -> MenuTransition(
+                            newState = Download(
+                                context,
+                                selectedIndex = 0
+                            )
+                        )
+
+                        else -> MenuTransition(this)
+                    }
+                }
+
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    Home(
+                        context,
+                        selectedIndex = 0
+                    )
+                )
+
+                MenuEvent.MenuLongPress -> MenuTransition(
+                    Home(context)
+                )
 
                 else -> MenuTransition(this)
             }
@@ -114,7 +161,7 @@ sealed class MenuState() {
                 }
 
                 MenuEvent.MenuShortPress -> MenuTransition(
-                    Home(context)
+                    Podcasts(context)
                 )
 
                 MenuEvent.MenuLongPress -> MenuTransition(
@@ -408,6 +455,10 @@ sealed class MenuState() {
             return when (event) {
 
                 MenuEvent.Confirm -> {
+                    if(context.slots.isEmpty()) {
+                        return MenuTransition(this)
+                    }
+
                     val slot = context.slots[selectedIndex]
 
                     MenuTransition(
@@ -424,7 +475,7 @@ sealed class MenuState() {
 
                 MenuEvent.MenuShortPress -> {
                     MenuTransition(
-                        newState = Home(context),
+                        newState = Podcasts(context),
                     )
                 }
 

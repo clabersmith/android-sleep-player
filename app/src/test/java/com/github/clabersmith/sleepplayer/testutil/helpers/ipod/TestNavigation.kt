@@ -1,4 +1,4 @@
-package com.github.clabersmith.sleepplayer.testutil.helpers
+package com.github.clabersmith.sleepplayer.testutil.helpers.ipod
 
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -8,10 +8,18 @@ import kotlinx.coroutines.test.advanceUntilIdle
 //--------------
 // Helper extension functions to set up specific menu states
 //--------------
+@OptIn(ExperimentalCoroutinesApi::class)
 fun TestScope.navigateToFeedsMenu(
     viewModel: MenuViewModel
 ) {
-    // Home -> Downloads
+    // Home -> Podcasts
+    click(viewModel)
+
+    //Podcasts, select Downloads
+    viewModel.moveSelection(1)
+    advanceUntilIdle()
+
+    // Podcasts -> Downloads
     click(viewModel)
 
     //Downloads -> Categories (via 'Add New')
@@ -49,15 +57,13 @@ fun TestScope.navigateToEpisodeDetailDownloaded(
     click(viewModel)
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 fun TestScope.navigateToNowPlaying(
     viewModel: MenuViewModel
 ) {
-    //Home, select Play
-    viewModel.moveSelection(1)
-    advanceUntilIdle()
+    //Home -> Podcasts
+    click(viewModel)
 
-    //Home -> Play
+    //Podcasts -> Play
     click(viewModel)
 
     //Play -> NowPlaying

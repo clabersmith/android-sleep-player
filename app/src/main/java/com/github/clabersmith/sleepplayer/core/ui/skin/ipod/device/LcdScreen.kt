@@ -19,6 +19,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.FeedMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.HomeMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.NowPlayingMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PlayMenu
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PodcastsMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import kotlin.math.min
 
@@ -56,6 +57,7 @@ fun LcdScreen(
                 // --- Dynamic Menu ---
                 when (menuState) {
                     is MenuState.Home -> HomeMenu(menuState)
+                    is MenuState.Podcasts -> PodcastsMenu(menuState)
                     is MenuState.Download -> DownloadMenu(menuState)
                     is MenuState.Categories -> CategoryMenu(menuState)
                     is MenuState.Feeds -> FeedMenu(menuState)

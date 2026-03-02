@@ -5,12 +5,12 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 
 @Composable
-fun HomeMenu(
-    state: MenuState.Home
+fun PodcastsMenu(
+    state: MenuState.Podcasts
 ) {
     val items = listOf(
-        MenuItem("Podcasts", showChevron = true),
-        MenuItem("Settings", showChevron = true)
+        MenuItem("Play", showChevron = true),
+        MenuItem("Downloads", showChevron = true)
     )
 
     MenuList(
