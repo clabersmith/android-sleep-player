@@ -1,14 +1,12 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
-import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail
-import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+
 
 /**
  * Handles UI menu effects for the iPod skin.
@@ -30,24 +28,20 @@ import kotlinx.coroutines.launch
  * @param navigateToPlay Callback to navigate to the Now Playing screen.
  */
 class MenuEffectHandler(
-    private val scope: CoroutineScope,
-    private val storage: FileStorage,
     private val player: AudioPlayer,
-    private val startDownload: (state: EpisodeDetail) -> Unit,
-    private val cancelDownload: (state: EpisodeDetail) -> Unit,
-    private val deleteEpisode: (state: EpisodeDetail) -> Unit,
+    private val startDownload: (state: MenuState.EpisodeDetail) -> Unit,
+    private val cancelDownload: (state: MenuState.EpisodeDetail) -> Unit,
+    private val deleteEpisode: (state: MenuState.EpisodeDetail) -> Unit,
+    private val goToNowPlaying: (slot: SlotState, origin: MenuState.NowPlaying.Origin) -> Unit,
+    private val checkStartPlayback: (slot: SlotState) -> Unit,
     private val startScanForward: () -> Unit,
     private val startScanBack: () -> Unit,
     private val stopScan: () -> Unit,
 ) {
     fun handle(effect: MenuEffect) {
         when (effect) {
-            is MenuEffect.StartPlayback -> {
-                scope.launch {
-                    val path = storage.getFilePath(effect.slot.fileName)
-                    player.load(AudioSource(path))
-                    player.play()
-                }
+            is MenuEffect.CheckStartPlayback -> {
+                checkStartPlayback(effect.slot)
             }
 
             is MenuEffect.TogglePlayPause -> {
@@ -83,6 +77,9 @@ class MenuEffectHandler(
             is MenuEffect.DeleteEpisode ->
                 deleteEpisode(effect.state)
 
+            is MenuEffect.GoToNowPlaying -> {
+                goToNowPlaying(effect.slot, effect.origin)
+            }
         }
     }
 }

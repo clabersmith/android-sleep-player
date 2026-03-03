@@ -17,13 +17,27 @@ sealed class MenuState() {
 
     abstract fun withContext(context: MenuContext): MenuState
 
+    protected fun handleCommonEvents(event: MenuEvent): MenuTransition? {
+        return when (event) {
+            MenuEvent.ScanForwardDown -> MenuTransition(this, effects = listOf(MenuEffect.StartScanForward))
+            MenuEvent.ScanForwardUp   -> MenuTransition(this, effects = listOf(MenuEffect.StopScan))
+            MenuEvent.ScanBackDown    -> MenuTransition(this, effects = listOf(MenuEffect.StartScanBack))
+            MenuEvent.ScanBackUp      -> MenuTransition(this, effects = listOf(MenuEffect.StopScan))
+            MenuEvent.MenuLongPress   -> MenuTransition(Home(context))
+            else -> null
+        }
+    }
 
     data class Home(
         override val context: MenuContext,
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        override val itemCount: Int get() = 2
+        init {
+            println("Home constructed: selectedIndex=$selectedIndex")
+        }
+
+        override val itemCount: Int get() = 0 //not used, Home has dynamic items based on now playing state
 
         override val title = "Menu"
 
@@ -32,17 +46,23 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+
+            println("Home reducer called with event: $event, selectedIndex: $selectedIndex")
+
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
-
                 MenuEvent.Confirm -> {
-                    when (selectedIndex) {
-
-                        0 -> MenuTransition(
-                            newState = Podcasts(
-                                context,
-                                selectedIndex = 0
+                    when(selectedIndex) {
+                        0 ->
+                            MenuTransition(
+                                newState = Podcasts(context)
                             )
-                        )
+
+                        1 ->
+                            MenuTransition(
+                                newState = this
+                            )
 
                         else -> MenuTransition(this)
                     }
@@ -68,6 +88,8 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -98,10 +120,6 @@ sealed class MenuState() {
                     )
                 )
 
-                MenuEvent.MenuLongPress -> MenuTransition(
-                    Home(context)
-                )
-
                 else -> MenuTransition(this)
             }
 
@@ -123,6 +141,8 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -164,10 +184,6 @@ sealed class MenuState() {
                     Podcasts(context)
                 )
 
-                MenuEvent.MenuLongPress -> MenuTransition(
-                    Home(context)
-                )
-
                 else ->
                     MenuTransition(this)
             }
@@ -188,6 +204,8 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -215,10 +233,6 @@ sealed class MenuState() {
                     )
                 )
 
-                MenuEvent.MenuLongPress -> MenuTransition(
-                    Home(context)
-                )
-
                 else ->
                     MenuTransition(this)
             }
@@ -241,6 +255,8 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -265,10 +281,6 @@ sealed class MenuState() {
                     )
                 )
 
-                MenuEvent.MenuLongPress -> MenuTransition(
-                    Home(context)
-                )
-
                 else -> MenuTransition(this)
             }
         }
@@ -291,6 +303,8 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -329,10 +343,6 @@ sealed class MenuState() {
                     )
                 )
 
-                MenuEvent.MenuLongPress -> MenuTransition(
-                    Home(context)
-                )
-
                 else ->
                     MenuTransition(this)
             }
@@ -358,7 +368,9 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
-            println("EpisodeDetail $event, origin: $origin")
+
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -421,12 +433,10 @@ sealed class MenuState() {
                                 selectedIndex = episodeIndex
                             )
                         )
+
+                        else -> MenuTransition(this)
                     }
                 }
-
-                MenuEvent.MenuLongPress -> MenuTransition(
-                    Home(context)
-                )
 
                 else ->
                     MenuTransition(this)
@@ -435,7 +445,7 @@ sealed class MenuState() {
 
         enum class Origin {
             EPISODES,
-            DOWNLOAD
+            DOWNLOAD,
         }
     }
 
@@ -452,6 +462,9 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
                 MenuEvent.Confirm -> {
@@ -461,27 +474,27 @@ sealed class MenuState() {
 
                     val slot = context.slots[selectedIndex]
 
+                    println("NowPlaying state created with slot: $slot")
+
                     MenuTransition(
                         newState = NowPlaying(
                             context = context,
                             slot = slot,
-                            durationMs = 0L,
-                            positionMs = 0L,
-                            isPlaying = true
+                            origin = NowPlaying.Origin.PLAY,
+                            selectedIndex = 0
                         ),
-                        effects = listOf(MenuEffect.StartPlayback(slot))
+                        effects = listOf(
+                            MenuEffect.CheckStartPlayback(slot),
+                            MenuEffect.GoToNowPlaying(slot, NowPlaying.Origin.PLAY)
+                        )
                     )
                 }
 
                 MenuEvent.MenuShortPress -> {
-                    MenuTransition(
-                        newState = Podcasts(context),
+                    MenuTransition (
+                        newState = Podcasts(context, selectedIndex = 0)
                     )
                 }
-
-                MenuEvent.MenuLongPress -> MenuTransition(
-                    Home(context)
-                )
 
                 else -> MenuTransition(this)
             }
@@ -491,9 +504,7 @@ sealed class MenuState() {
     data class NowPlaying(
         override val context: MenuContext,
         val slot: SlotState,
-        val durationMs: Long,
-        val positionMs: Long,
-        val isPlaying: Boolean,
+        val origin: Origin,
         override val selectedIndex: Int = 0
     ) : MenuState() {
         override val itemCount: Int = 1
@@ -503,66 +514,32 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
+            println("NowPlaying reducer called with slot: $slot")
+            handleCommonEvents(event)?.let { return it }
+
             return when (event) {
 
-                MenuEvent.PlayPause -> {
-                    MenuTransition(
-                        newState = copy(isPlaying = !isPlaying),
-                        effects = listOf(MenuEffect.TogglePlayPause)
-                    )
-                }
-
-                is MenuEvent.PlaybackProgress -> {
-                    MenuTransition(
-                        newState = copy(
-                            positionMs = event.positionMs,
-                            durationMs = event.durationMs,
-                            isPlaying = event.isPlaying
-                        )
-                    )
-                }
-
-                MenuEvent.ScanForwardDown ->
-                    MenuTransition(
-                        this,
-                        effects = listOf(MenuEffect.StartScanForward)
-                    )
-
-                MenuEvent.ScanForwardUp ->
-                    MenuTransition(
-                        this,
-                        effects = listOf(MenuEffect.StopScan)
-                    )
-
-                MenuEvent.ScanBackDown ->
-                    MenuTransition(
-                        this,
-                        effects = listOf(MenuEffect.StartScanBack)
-                    )
-
-                MenuEvent.ScanBackUp ->
-                    MenuTransition(
-                        this,
-                        effects = listOf(MenuEffect.StopScan)
-                    )
-
                 MenuEvent.MenuShortPress ->
-                    MenuTransition(
-                        newState = Play(context, selectedIndex = 0),
-                        effects = listOf(
-                            MenuEffect.StopPlayback
+
+                    when (origin) {
+                        Origin.PLAY -> MenuTransition(
+                            Play(context)
                         )
-                    )
 
-                MenuEvent.MenuLongPress -> {
-                    MenuTransition(
-                        newState = Home(context),
-                        effects = listOf(MenuEffect.StopPlayback)
-                    )
-                }
+                        Origin.HOME -> MenuTransition(
+                            Home(context, selectedIndex = 1)
+                        )
 
-                else -> MenuTransition(this)
+                        else -> MenuTransition(this)
+                    }
+
+                    else -> MenuTransition(this)
             }
+        }
+
+        enum class Origin {
+            HOME,
+            PLAY
         }
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)

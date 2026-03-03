@@ -320,34 +320,37 @@ class MenuViewModelTest() {
 
         println("menu state: ${viewModel.menuState.value}")
 
-        viewModel.onPlayPausePressed()
+        viewModel.onPlayPauseShortPressed()
 
         assertTrue(fakePodcastPlayer.playCalled)
 
-        viewModel.onPlayPausePressed()
+        viewModel.onPlayPauseShortPressed()
 
         assertTrue(fakePodcastPlayer.pauseCalled)
     }
 
     @Test
-    fun `isPlaying updates NowPlaying state`() = runTest {
+    fun `isPlaying updates nowPlayingUiState`() = runTest {
         val viewModel = createNewViewModel()
         persistFakeSlot()
 
         advanceUntilIdle()
 
-        navigateToNowPlaying(viewModel)  // Start playback
+        navigateToNowPlaying(viewModel)
 
         advanceUntilIdle()
 
-        val state = viewModel.menuState.value as MenuState.NowPlaying
+        val state = viewModel.nowPlayingUiState.value
+
+        println("nowPlayingUiState: ${viewModel.nowPlayingUiState.value}")
+
         assertTrue(state.isPlaying)
 
-        viewModel.onPlayPausePressed()
+        viewModel.onPlayPauseShortPressed()
 
         advanceUntilIdle()
 
-        val updated = viewModel.menuState.value as MenuState.NowPlaying
+        val updated = viewModel.nowPlayingUiState.value
         assertFalse(updated.isPlaying)
     }
 
@@ -442,8 +445,7 @@ class MenuViewModelTest() {
             slotRepository = fakePersistedSlotRepository,
             downloader = downloader,
             storage = fakeFileStorage,
-            player = fakePodcastPlayer,
-            playbackDispatcher = Dispatchers.Default
+            player = fakePodcastPlayer
         )
 
     private suspend fun persistFakeSlot() {

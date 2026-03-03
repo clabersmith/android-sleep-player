@@ -3,15 +3,28 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu
 import androidx.compose.runtime.Composable
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
 
 @Composable
 fun HomeMenu(
-    state: MenuState.Home
+    state: MenuState.Home,
+    nowPlayingUiState: NowPlayingUiState
 ) {
-    val items = listOf(
-        MenuItem("Podcasts", showChevron = true),
-        MenuItem("Settings", showChevron = true)
+
+    val items : MutableList<MenuItem> = mutableListOf()
+
+    items.add(
+        MenuItem(title = "Podcasts", showChevron = true)
     )
+
+    if (nowPlayingUiState.slot != null) items.add(
+        MenuItem("Now Playing")
+    )
+
+    items.add(
+        MenuItem(title = "Settings", showChevron = true)
+    )
+
 
     MenuList(
         items = items,

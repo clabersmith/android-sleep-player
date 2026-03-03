@@ -18,20 +18,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuDownloadProgress
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuHighlight
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
 
 @Composable
 fun NowPlayingMenu(
-    state: MenuState.NowPlaying
+    state: MenuState.NowPlaying,
+    nowPlayingUiState: NowPlayingUiState
 ) {
+
+    println("loading with slot ${state.slot} and playback state ${nowPlayingUiState.slot}")
+
+    val isActiveTrack =
+        nowPlayingUiState.slot == state.slot
+
+    val position =
+        if (isActiveTrack) nowPlayingUiState.positionMs else 0L
+
+    val duration =
+        if (isActiveTrack) nowPlayingUiState.durationMs else 0L
 
     Column(
         modifier = Modifier
@@ -73,32 +82,39 @@ fun NowPlayingMenu(
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
 
-        Spacer(Modifier.height(80.dp))
+        // push progress/time to bottom
+        Spacer(Modifier.weight(1f))
 
-        // Progress bar
-        LcdProgressBar(
-            progress = if (state.durationMs == 0L) 0f
-            else state.positionMs.toFloat() / state.durationMs
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        // Time row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
         ) {
-            Text(
-                text = formatTime(state.positionMs),
-                style = IpodMenuText,
-                color = IpodTextPrimary
+            // Progress bar
+            LcdProgressBar(
+                progress = if (duration == 0L) 0f
+                else position.toFloat() / duration
             )
-            Text(
-                text = "-${formatTime(state.durationMs - state.positionMs)}",
-                style = IpodMenuText,
-                color = IpodTextPrimary
-            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // Time row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = formatTime(position),
+                    style = IpodMenuText,
+                    color = IpodTextPrimary
+                )
+                Text(
+                    text = "-${formatTime(duration - position)}",
+                    style = IpodMenuText,
+                    color = IpodTextPrimary
+                )
+            }
         }
+
     }
 }
 
@@ -132,6 +148,8 @@ fun LcdProgressBar(progress: Float) {
 }
 
 fun formatTime(ms: Long): String {
+    if(ms <= 0L) return "00:00"
+
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60

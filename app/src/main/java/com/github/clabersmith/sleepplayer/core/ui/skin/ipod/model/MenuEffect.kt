@@ -21,8 +21,13 @@ sealed interface MenuEffect {
     // Playback effects
     // -----------------------------
 
-    data class StartPlayback(
+    data class CheckStartPlayback(
         val slot: SlotState
+    ) : MenuEffect
+
+    data class GoToNowPlaying(
+        val slot: SlotState,
+        val origin: MenuState.NowPlaying.Origin
     ) : MenuEffect
 
     data object TogglePlayPause : MenuEffect
@@ -35,4 +40,5 @@ sealed interface MenuEffect {
     object StartScanForward : MenuEffect
     object StartScanBack : MenuEffect
     object StopScan : MenuEffect
+
 }

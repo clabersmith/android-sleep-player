@@ -46,7 +46,8 @@ fun ClickWheel(
     onConfirm: () -> Unit,
     onMenuShortPress: () -> Unit,
     onMenuLongPress: () -> Unit,
-    onPlayPausePress: () -> Unit,
+    onPlayPauseShortPress: () -> Unit,
+    onPlayPauseLongPress: () -> Unit,
     onScanForwardDown: () -> Unit,
     onScanForwardUp: () -> Unit,
     onScanBackDown: () -> Unit,
@@ -69,7 +70,6 @@ fun ClickWheel(
 
 //        val currentMax = minOf(maxWidth, maxHeight)
 //        val scale = (currentMax.value / baseSize.value).coerceAtMost(1.3f)
-
 
         val wheelSize = baseSize * scale
         val centerSize = 80.dp * scale
@@ -149,7 +149,7 @@ fun ClickWheel(
                     }
             )
 
-            // ----- FORWARD -----
+            // ----- Forward -----
             Text(
                 text = "⏭",
                 color = textColor,
@@ -172,7 +172,7 @@ fun ClickWheel(
                     }
             )
 
-            // ----- PLAY/PAUSE (visual only for now) -----
+            // ----- Play/Pause -----
             Canvas(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -181,7 +181,15 @@ fun ClickWheel(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onPress = {
-                                onPlayPausePress()
+                                val longPressTriggered = withTimeoutOrNull(2000) {
+                                    awaitRelease()
+                                } == null
+
+                                if(longPressTriggered) {
+                                    onPlayPauseLongPress()
+                                } else {
+                                    onPlayPauseShortPress()
+                                }
                             }
                         )
                     }

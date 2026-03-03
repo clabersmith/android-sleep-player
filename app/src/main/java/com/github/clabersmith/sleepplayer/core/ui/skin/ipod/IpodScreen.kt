@@ -5,8 +5,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +39,7 @@ fun IpodScreen(
         else IpodClickWheelTextColorLight
 
     val menuState by viewModel.menuState.collectAsState()
+    val nowPlayingUiState by viewModel.nowPlayingUiState.collectAsState()
 
     val context = LocalContext.current
 
@@ -78,7 +77,8 @@ fun IpodScreen(
         Spacer(Modifier.height(24.dp))
 
         LcdScreen(
-            menuState = menuState
+            menuState = menuState,
+            nowPlayingUiState = nowPlayingUiState
         )
 
         Spacer(Modifier.height(36.dp))
@@ -107,8 +107,12 @@ fun IpodScreen(
                 viewModel.onMenuShortPress()
                 playClick()
             },
-            onPlayPausePress = {
-                viewModel.onPlayPausePressed()
+            onPlayPauseShortPress = {
+                viewModel.onPlayPauseShortPressed()
+                playClick()
+            },
+            onPlayPauseLongPress = {
+                viewModel.onPlayPauseLongPressed()
                 playClick()
             },
             onScanForwardDown = {

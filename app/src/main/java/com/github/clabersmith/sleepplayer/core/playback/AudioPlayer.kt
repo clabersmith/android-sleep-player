@@ -1,6 +1,10 @@
 package com.github.clabersmith.sleepplayer.core.playback
 
+import kotlinx.coroutines.flow.Flow
+
 interface AudioPlayer {
+
+    val snapshotFlow: Flow<PlayerSnapshot>
 
     suspend fun load(source: AudioSource)
 
@@ -16,3 +20,9 @@ interface AudioPlayer {
 
     fun stop()
 }
+
+data class PlayerSnapshot(
+    val positionMs: Long,
+    val durationMs: Long,
+    val isPlaying: Boolean
+)

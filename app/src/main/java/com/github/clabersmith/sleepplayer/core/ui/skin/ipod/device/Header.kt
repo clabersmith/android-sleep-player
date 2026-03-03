@@ -26,10 +26,12 @@ import com.github.clabersmith.sleepplayer.R
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
 
 @Composable
 fun Header(
-    menuState: MenuState
+    menuState: MenuState,
+    nowPlayingUiState: NowPlayingUiState
 ) {
     Column {
         Box(
@@ -38,9 +40,9 @@ fun Header(
                 .height(28.dp),
             contentAlignment = Alignment.Center
         ) {
-            if (menuState is MenuState.NowPlaying) {
+            if (nowPlayingUiState.slot != null) {
                 NowPlayingPlayIcon(
-                    isPlaying = menuState.isPlaying,
+                    isPlaying = nowPlayingUiState.isPlaying,
                     color = IpodTextPrimary,
                     iconSize = 20.dp,
                     modifier = Modifier

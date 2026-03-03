@@ -3,6 +3,7 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
+import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuContext
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
@@ -15,11 +16,14 @@ import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepos
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -57,15 +61,14 @@ class MenuViewModel(
     private val slotRepository: SlotRepository,
     private val downloader: Downloader,
     private val storage: FileStorage,
-    private val player: AudioPlayer,
-    private val playbackDispatcher: CoroutineDispatcher
+    private val player: AudioPlayer
 ) : ViewModel() {
 
     private var context = MenuContext(
         slots = emptyList(),
         feeds = emptyList(),
         categories = emptyList(),
-        maxSlotsCount = 4  // This is a fixed limit for the number of download slots, it can be adjusted as needed.
+        maxSlotsCount = 4 // This is a fixed limit for the number of download slots, it can be adjusted as needed.
     )
 
     private val _menuState = MutableStateFlow<MenuState>(MenuState.Home(context))
@@ -77,28 +80,40 @@ class MenuViewModel(
     private var playProgressJob: Job? = null
     private var wasPlayingBeforeScan = false
 
-    init {
-        load()
+    private val _activeSlot = MutableStateFlow<SlotState?>(null)
+    val activeSlot: StateFlow<SlotState?> = _activeSlot
 
-        //----------------
-        // Track audio playback progress every 500ms while playing
-        //----------------
-        viewModelScope.launch(playbackDispatcher) {
+    val nowPlayingUiState: StateFlow<NowPlayingUiState> =
+        combine(
+            activeSlot,
+            player.snapshotFlow
+        ) { slot, snapshot ->
 
-            while (isActive) {
-                delay(500)
-                val currentState = _menuState.value
-                if (currentState is MenuState.NowPlaying) {
-                    dispatch(
-                        MenuEvent.PlaybackProgress(
-                            positionMs = player.currentPosition(),
-                            durationMs = player.duration(),
-                            isPlaying = player.isPlaying()
-                        )
-                    )
+            NowPlayingUiState(
+                slot = slot,
+                positionMs = snapshot.positionMs,
+                durationMs = snapshot.durationMs,
+                isPlaying = snapshot.isPlaying
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            NowPlayingUiState.EMPTY
+        )
+
+    val homeItemsFlow: StateFlow<List<HomeItem>> =
+        nowPlayingUiState
+            .map { ui ->
+                buildList {
+                    add(HomeItem.Play)
+                    if (ui.slot != null) add(HomeItem.NowPlaying)
+                    add(HomeItem.Settings)
                 }
             }
-        }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, listOf(HomeItem.Play, HomeItem.Settings))
+
+    init {
+        load()
     }
 
     // Initial load of feeds, categories and persisted download slots
@@ -131,14 +146,18 @@ class MenuViewModel(
         _menuState.value = current.withContext(context)
     }
 
+    private fun goToNowPlaying(slot: SlotState, origin: MenuState.NowPlaying.Origin) {
+        _menuState.value = MenuState.NowPlaying(context, slot, origin)
+    }
+
     // Effect handler that executes side effects emitted by menu state transitions
     private val effectHandler = MenuEffectHandler(
-        scope = viewModelScope,
-        storage = storage,
         player = player,
         startDownload = { state -> startDownload(state) },
         cancelDownload = { state -> cancelDownload(state) },
         deleteEpisode = { state -> deleteEpisode(state) },
+        goToNowPlaying = { slot, origin -> goToNowPlaying(slot, origin) },
+        checkStartPlayback = { slot -> checkStartPlayback(slot) },
         startScanForward = { startScanForward() },
         startScanBack = { startScanBack() },
         stopScan = { stopScan() },
@@ -152,7 +171,12 @@ class MenuViewModel(
 
         _menuState.value = transition.newState
 
+        println("Transitioned " +
+                "from ${current::class.simpleName} to ${transition.newState::class.simpleName} " +
+                "on event ${event::class.simpleName}")
+
         transition.effects.forEach {
+            println("Handling effect ${it::class.simpleName}")
             effectHandler.handle(it)
         }
     }
@@ -175,8 +199,16 @@ class MenuViewModel(
     fun moveSelection(delta: Int) {
         val state = _menuState.value
 
-        setState(state.copyWithIndex(
-            nextIndex(state.selectedIndex, delta, state.itemCount)))
+        val count = when (state) {
+            is MenuState.Home -> homeItemsFlow.value.size
+            else -> state.itemCount
+        }
+
+        setState(
+            state.copyWithIndex(
+                nextIndex(state.selectedIndex, delta, count)
+            )
+        )
     }
 
     // -----------------------------
@@ -272,14 +304,54 @@ class MenuViewModel(
     //------------------------------
     // Click Wheel Play/Pause
     //------------------------------
-    fun onPlayPausePressed() {
-        dispatch(MenuEvent.PlayPause)
+    fun onPlayPauseShortPressed() {
+        if (_activeSlot.value != null) {
+            if (player.isPlaying()) player.pause()
+            else player.play()
+        } else if (_menuState.value is MenuState.NowPlaying){
+            //If we stopped the track in NowPlaying, we should be able to start again
+            val current = _menuState.value as MenuState.NowPlaying
+            val slotToPlay = current.slot
+            checkStartPlayback(slotToPlay)
+        }
+    }
+
+    fun onPlayPauseLongPressed() {
+        if (_activeSlot.value != null) {
+            player.stop()
+            _activeSlot.value = null
+        }
     }
 
     // -----------------------------
     // Click Wheel Center Button
     // -----------------------------
     fun confirmSelection() {
+        val current = _menuState.value
+
+        if (current is MenuState.Home) {
+            println("Confirming selection on Home screen")
+            val items = homeItemsFlow.value
+            val selectedItem = items.getOrNull(current.selectedIndex) ?: return
+
+            when (selectedItem) {
+                HomeItem.Play -> {
+                    dispatch(MenuEvent.Confirm)
+                }
+
+                HomeItem.NowPlaying -> {
+                    val slot = _activeSlot.value ?: return
+                    goToNowPlaying(slot, MenuState.NowPlaying.Origin.HOME)
+                }
+
+                HomeItem.Settings -> {
+                    dispatch(MenuEvent.Confirm)
+                }
+            }
+
+            return
+        }
+
         dispatch(MenuEvent.Confirm)
     }
 
@@ -384,6 +456,21 @@ class MenuViewModel(
         goDownloaded()
     }
 
+    fun checkStartPlayback(slot: SlotState) {
+        println("Checking playback for slot ${slot.feedName} - ${slot.loadedEpisode.title}")
+        if (_activeSlot.value != slot) {
+
+            viewModelScope.launch {
+
+                val path = storage.getFilePath(slot.fileName)
+
+                player.load(AudioSource(path))
+                player.play()
+
+                _activeSlot.value = slot
+            }
+        }
+    }
 
     // -----------------------------
     // Menu Button (Click Wheel Back
@@ -490,15 +577,18 @@ class MenuViewModel(
                     it.episodeIndex == previous.episodeIndex
         }
 
-        setState(previous.copy(
-            isDownloading = false,
-            actionRows = when {
-                alreadyDownloaded -> listOf(ActionRow.AlreadyDownloaded)
-                else -> listOf(ActionRow.Download)
-            },
-            selectedIndex = 0)
+        setState(
+            previous.copy(
+                isDownloading = false,
+                actionRows = when {
+                    alreadyDownloaded -> listOf(ActionRow.AlreadyDownloaded)
+                    else -> listOf(ActionRow.Download)
+                },
+                selectedIndex = 0
+            )
         )
     }
+
 }
 
 sealed class DownloadResult {
@@ -506,5 +596,28 @@ sealed class DownloadResult {
     object Cancelled : DownloadResult()
     data class Error(val throwable: Throwable) : DownloadResult()
 }
+
+data class NowPlayingUiState(
+    val slot: SlotState?,
+    val positionMs: Long,
+    val durationMs: Long,
+    val isPlaying: Boolean
+) {
+    companion object {
+        val EMPTY = NowPlayingUiState(
+            slot = null,
+            positionMs = 0L,
+            durationMs = 0L,
+            isPlaying = false
+        )
+    }
+}
+
+sealed class HomeItem {
+    object Play : HomeItem()
+    object NowPlaying : HomeItem()
+    object Settings : HomeItem()
+}
+
 
 

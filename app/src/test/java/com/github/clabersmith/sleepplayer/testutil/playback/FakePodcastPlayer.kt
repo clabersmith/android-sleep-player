@@ -2,56 +2,74 @@ package com.github.clabersmith.sleepplayer.testutil.playback
 
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
+import com.github.clabersmith.sleepplayer.core.playback.PlayerSnapshot
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class FakePodcastPlayer : AudioPlayer {
+
     var playCalled = false
     var pauseCalled = false
     var stopCalled = false
     var lastSeekPosition: Long = 0L
 
-    private val _isPlaying = MutableStateFlow(false)
+    private val _snapshotFlow = MutableStateFlow(
+        PlayerSnapshot(
+            positionMs = 0L,
+            durationMs = 60_000L,
+            isPlaying = false
+        )
+    )
+
+    override val snapshotFlow: Flow<PlayerSnapshot>
+        get() = _snapshotFlow
 
     var currentPosition: Long = 0L
-    var duration: Long = 60_000L
+    private var duration: Long = 60_000L
+    private var isPlaying: Boolean = false
+
     override suspend fun load(source: AudioSource) {
-        // No-op for fake player
+        // no-op
     }
 
     override fun play() {
         playCalled = true
-        _isPlaying.value = true
+        isPlaying = true
+        emitSnapshot()
     }
 
     override fun pause() {
         pauseCalled = true
-        _isPlaying.value = false
+        isPlaying = false
+        emitSnapshot()
     }
 
     override fun stop() {
         stopCalled = true
-        _isPlaying.value = false
+        isPlaying = false
+        emitSnapshot()
     }
 
     override fun seekTo(positionMs: Long) {
         lastSeekPosition = positionMs
         currentPosition = positionMs
+        emitSnapshot()
     }
 
-    override fun currentPosition(): Long {
-        return currentPosition
-    }
+    override fun currentPosition(): Long = currentPosition
 
-    override fun duration(): Long {
-        return duration
-    }
+    override fun duration(): Long = duration
 
-    override fun isPlaying(): Boolean {
-       return _isPlaying.value
-    }
+    override fun isPlaying(): Boolean = isPlaying
 
-    override fun release() {
-        // No-op for fake player
+    override fun release() {}
+
+    private fun emitSnapshot() {
+        _snapshotFlow.value = PlayerSnapshot(
+            positionMs = currentPosition,
+            durationMs = duration,
+            isPlaying = isPlaying
+        )
     }
 }

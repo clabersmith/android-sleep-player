@@ -127,7 +127,7 @@ private fun EpisodeDetailTextRow(
             IpodMenuText.copy(
                 fontSize = IpodMenuText.fontSize * 0.8f
             ),
-        color = MaterialTheme.colorScheme.onBackground.copy(
+        color = IpodTextPrimary.copy(
             alpha = if (isTitle) 1f else 0.75f
         ),
         modifier = Modifier
