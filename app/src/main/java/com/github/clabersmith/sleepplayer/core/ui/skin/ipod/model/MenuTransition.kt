@@ -9,5 +9,12 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
  */
 data class MenuTransition(
     val newState: MenuState,
-    val effects: List<MenuEffect> = emptyList()
+    val effects: List<MenuEffect> = emptyList(),
+    val direction: NavDirection = NavDirection.None
 )
+
+enum class NavDirection {
+    Forward,
+    Back,
+    None
+}

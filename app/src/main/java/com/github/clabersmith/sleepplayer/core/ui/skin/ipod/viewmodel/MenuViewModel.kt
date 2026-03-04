@@ -8,6 +8,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuContext
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.NavDirection
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
@@ -74,6 +75,9 @@ class MenuViewModel(
     private val _menuState = MutableStateFlow<MenuState>(MenuState.Home(context))
     val menuState: StateFlow<MenuState> = _menuState
 
+    private val _navDirection = MutableStateFlow<NavDirection>(NavDirection.None)
+    val navDirection: StateFlow<NavDirection> = _navDirection
+
     private var downloadJob: Job? = null
     private var scanJob: Job? = null
 
@@ -106,8 +110,8 @@ class MenuViewModel(
             .map { ui ->
                 buildList {
                     add(HomeItem.Play)
-                    if (ui.slot != null) add(HomeItem.NowPlaying)
                     add(HomeItem.Settings)
+                    if (ui.slot != null) add(HomeItem.NowPlaying)
                 }
             }
             .stateIn(viewModelScope, SharingStarted.Eagerly, listOf(HomeItem.Play, HomeItem.Settings))
@@ -170,6 +174,7 @@ class MenuViewModel(
         val transition = current.reduce(event)
 
         _menuState.value = transition.newState
+        _navDirection.value = transition.direction
 
         println("Transitioned " +
                 "from ${current::class.simpleName} to ${transition.newState::class.simpleName} " +
@@ -339,13 +344,13 @@ class MenuViewModel(
                     dispatch(MenuEvent.Confirm)
                 }
 
+                HomeItem.Settings -> {
+                    dispatch(MenuEvent.Confirm)
+                }
+
                 HomeItem.NowPlaying -> {
                     val slot = _activeSlot.value ?: return
                     goToNowPlaying(slot, MenuState.NowPlaying.Origin.HOME)
-                }
-
-                HomeItem.Settings -> {
-                    dispatch(MenuEvent.Confirm)
                 }
             }
 

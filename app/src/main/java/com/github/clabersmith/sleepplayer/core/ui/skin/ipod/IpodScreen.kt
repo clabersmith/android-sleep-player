@@ -40,6 +40,7 @@ fun IpodScreen(
 
     val menuState by viewModel.menuState.collectAsState()
     val nowPlayingUiState by viewModel.nowPlayingUiState.collectAsState()
+    val navDirection by viewModel.navDirection.collectAsState()
 
     val context = LocalContext.current
 
@@ -78,7 +79,8 @@ fun IpodScreen(
 
         LcdScreen(
             menuState = menuState,
-            nowPlayingUiState = nowPlayingUiState
+            nowPlayingUiState = nowPlayingUiState,
+            navDirection = navDirection
         )
 
         Spacer(Modifier.height(36.dp))

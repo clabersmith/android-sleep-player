@@ -17,12 +17,12 @@ fun HomeMenu(
         MenuItem(title = "Podcasts", showChevron = true)
     )
 
-    if (nowPlayingUiState.slot != null) items.add(
-        MenuItem("Now Playing")
-    )
-
     items.add(
         MenuItem(title = "Settings", showChevron = true)
+    )
+
+    if (nowPlayingUiState.slot != null) items.add(
+        MenuItem("Now Playing", showChevron = true)
     )
 
 

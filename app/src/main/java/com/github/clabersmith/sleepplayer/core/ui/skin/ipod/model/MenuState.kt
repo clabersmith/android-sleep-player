@@ -56,7 +56,8 @@ sealed class MenuState() {
                     when(selectedIndex) {
                         0 ->
                             MenuTransition(
-                                newState = Podcasts(context)
+                                newState = Podcasts(context),
+                                direction = NavDirection.Forward
                             )
 
                         1 ->
@@ -99,14 +100,16 @@ sealed class MenuState() {
                             newState = Play(
                                 context,
                                 selectedIndex = 0
-                            )
+                            ),
+                            direction = NavDirection.Forward
                         )
 
                         1 -> MenuTransition(
                             newState = Download(
                                 context,
                                 selectedIndex = 0
-                            )
+                            ),
+                            direction = NavDirection.Forward
                         )
 
                         else -> MenuTransition(this)
@@ -117,7 +120,8 @@ sealed class MenuState() {
                     Home(
                         context,
                         selectedIndex = 0
-                    )
+                    ),
+                    direction = NavDirection.Back
                 )
 
                 else -> MenuTransition(this)
@@ -159,7 +163,8 @@ sealed class MenuState() {
                                 newState = Categories(
                                     context = context,
                                     selectedIndex = 0
-                                )
+                                ),
+                                direction = NavDirection.Forward
                             )
 
                         else -> {
@@ -174,14 +179,16 @@ sealed class MenuState() {
                                     origin = EpisodeDetail.Origin.DOWNLOAD,
                                     actionRows = listOf(ActionRow.Delete),
                                     selectedIndex = 0
-                                )
+                                ),
+                                direction = NavDirection.Forward
                             )
                         }
                     }
                 }
 
                 MenuEvent.MenuShortPress -> MenuTransition(
-                    Podcasts(context)
+                    newState = Podcasts(context),
+                    direction = NavDirection.Back
                 )
 
                 else ->
@@ -222,7 +229,8 @@ sealed class MenuState() {
                             categoryName = category,
                             categoryFeeds = categoryFeeds,
                             selectedIndex = 0
-                        )
+                        ),
+                        direction = NavDirection.Forward
                     )
                 }
 
@@ -230,7 +238,8 @@ sealed class MenuState() {
                     Download(
                         context,
                         selectedIndex = 0
-                    )
+                    ),
+                    direction = NavDirection.Back
                 )
 
                 else ->
@@ -271,14 +280,16 @@ sealed class MenuState() {
                             categoryFeeds = categoryFeeds,
 
                             selectedIndex = 0
-                        )
+                        ),
+                        direction = NavDirection.Forward
                     )
                 }
 
                 MenuEvent.MenuShortPress -> MenuTransition(
                     Categories(
                         context
-                    )
+                    ),
+                    direction = NavDirection.Back
                 )
 
                 else -> MenuTransition(this)
@@ -331,7 +342,8 @@ sealed class MenuState() {
                             origin = EpisodeDetail.Origin.EPISODES,
                             actionRows = rows,
                             selectedIndex = 0
-                        )
+                        ),
+                        direction = NavDirection.Forward
                     )
                 }
 
@@ -340,7 +352,8 @@ sealed class MenuState() {
                         context = context,
                         categoryName = context.feeds[feedIndex].category,
                         categoryFeeds = categoryFeeds,
-                    )
+                    ),
+                    direction = NavDirection.Back
                 )
 
                 else ->
@@ -431,7 +444,8 @@ sealed class MenuState() {
                                 episodes = context.feeds[feedIndex].episodes,
                                 categoryFeeds = context.feeds.filter { it.category == context.feeds[feedIndex].category },
                                 selectedIndex = episodeIndex
-                            )
+                            ),
+                            direction = NavDirection.Back
                         )
 
                         else -> MenuTransition(this)
@@ -492,7 +506,8 @@ sealed class MenuState() {
 
                 MenuEvent.MenuShortPress -> {
                     MenuTransition (
-                        newState = Podcasts(context, selectedIndex = 0)
+                        newState = Podcasts(context, selectedIndex = 0),
+                        direction = NavDirection.Back
                     )
                 }
 
