@@ -66,13 +66,13 @@ fun ClickWheel(
         val availableSize = minOf(maxWidth, maxHeight)
 
         // Remove the coerceAtMost cap — let it scale freely
-        val scale = availableSize / baseSize
+        //val scale = availableSize / baseSize
 
-//        val currentMax = minOf(maxWidth, maxHeight)
-//        val scale = (currentMax.value / baseSize.value).coerceAtMost(1.3f)
+        val scale = (availableSize.value / baseSize.value).coerceAtMost(1.3f)
 
         val wheelSize = baseSize * scale
         val centerSize = 80.dp * scale
+
 
         Box(
             modifier = Modifier

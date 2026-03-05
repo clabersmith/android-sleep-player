@@ -21,6 +21,10 @@ fun HomeMenu(
         MenuItem(title = "Settings", showChevron = true)
     )
 
+    items.add(
+        MenuItem(title = "Extras", showChevron = true)
+    )
+
     if (nowPlayingUiState.slot != null) items.add(
         MenuItem("Now Playing", showChevron = true)
     )

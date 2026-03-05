@@ -3,31 +3,23 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.CategoryMenu
@@ -57,11 +49,15 @@ fun LcdScreen(
         contentAlignment = Alignment.Center
     ) {
         val baseWidth = 260.dp
-        val baseHeight = 200.dp
+        val baseHeight = 220.dp
 
         val scaleX = maxWidth / baseWidth
         val scaleY = maxHeight / baseHeight
-        val scale = min(scaleX, scaleY).coerceAtMost(1.3f)
+
+        // Remove the coerceAtMost cap — let it scale freely
+        //val scale = min(scaleX, scaleY)
+
+        val scale = min(scaleX, scaleY).coerceAtMost(1.5f)
         val animationKey = menuState::class
 
         LcdSurface(
@@ -151,7 +147,7 @@ fun LcdScreen(
                             }
                         }
                     ) {
-                        renderMenu(menuState, nowPlayingUiState)
+                        RenderMenu(menuState, nowPlayingUiState)
                     }
                 }
             }
@@ -160,7 +156,7 @@ fun LcdScreen(
 }
 
 @Composable
-private fun renderMenu(
+private fun RenderMenu(
     menuState: MenuState,
     nowPlayingUiState: NowPlayingUiState,
 ) {

@@ -29,15 +29,10 @@ class PodcastDownloader(
         onProgress: (Float) -> Unit
     ): File {
 
-
-
-        val testUrl =
-            "https://dts.podtrac.com/redirect.mp3/dovetail.prxu.org/_/137/2270a71f-9327-40f1-b8a9-6dff83c79028/SWMP_1414_Datas_Mom_SnoreTrekTNGDatasMom_2.1.26_PP-1.mp3"
-
         val file = storage.createFile(fileName)
 
         try {
-            client.prepareGet(testUrl).execute { response ->
+            client.prepareGet(url).execute { response ->
 
                 val channel = response.body<ByteReadChannel>()
 

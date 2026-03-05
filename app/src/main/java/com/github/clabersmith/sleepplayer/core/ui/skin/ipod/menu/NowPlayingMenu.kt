@@ -12,18 +12,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.github.clabersmith.sleepplayer.R
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode.TrackPosition
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode.Volume
 
 @Composable
 fun NowPlayingMenu(
@@ -89,32 +97,43 @@ fun NowPlayingMenu(
             modifier = Modifier
                 .fillMaxWidth()
         ) {
-            // Progress bar
-            LcdProgressBar(
-                progress = if (duration == 0L) 0f
-                else position.toFloat() / duration
-            )
+            // Track progress or volume bar
+            when (nowPlayingUiState.barMode) {
+                TrackPosition -> TrackProgressBar(
+                    nowPlayingUiState.durationMs,
+                    nowPlayingUiState.positionMs)
 
-            Spacer(Modifier.height(4.dp))
-
-            // Time row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = formatTime(position),
-                    style = IpodMenuText,
-                    color = IpodTextPrimary
-                )
-                Text(
-                    text = "-${formatTime(duration - position)}",
-                    style = IpodMenuText,
-                    color = IpodTextPrimary
-                )
+                Volume -> VolumeBar(nowPlayingUiState.volume)
             }
         }
 
+    }
+}
+
+@Composable
+private fun TrackProgressBar(duration: Long, position: Long) {
+    LcdProgressBar(
+        progress = if (duration == 0L) 0f
+        else position.toFloat() / duration
+    )
+
+    Spacer(Modifier.height(4.dp))
+
+    // Time row
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = formatTime(position),
+            style = IpodMenuText,
+            color = IpodTextPrimary
+        )
+        Text(
+            text = "-${formatTime(duration - position)}",
+            style = IpodMenuText,
+            color = IpodTextPrimary
+        )
     }
 }
 
@@ -145,6 +164,48 @@ fun LcdProgressBar(progress: Float) {
                 )
         )
     }
+}
+
+@Composable
+fun VolumeBar(volume: Int) {
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_ipod_volume_low),
+            contentDescription = null,
+            tint = Color.Unspecified
+        )
+
+        Box(
+            modifier = Modifier
+                //.fillMaxWidth()
+                .weight(1f)
+                .height(16.dp)
+                .border(1.dp, IpodTextPrimary, RectangleShape)
+                .clip(RectangleShape)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(volume / 100f)
+                    .background(
+                        IpodTextPrimary.copy(alpha = 0.65f)
+                    )
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        Icon(
+            painterResource(R.drawable.ic_ipod_volume_high),
+            contentDescription = null,
+            tint = Color.Unspecified
+        )
+    }
+
+    Spacer(Modifier.height(20.dp))
 }
 
 fun formatTime(ms: Long): String {

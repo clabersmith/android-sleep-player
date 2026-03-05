@@ -65,6 +65,11 @@ sealed class MenuState() {
                                 newState = this
                             )
 
+                        2 ->
+                            MenuTransition(
+                                newState = this
+                            )
+
                         else -> MenuTransition(this)
                     }
                 }

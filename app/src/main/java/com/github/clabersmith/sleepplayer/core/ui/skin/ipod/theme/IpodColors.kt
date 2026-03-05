@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 val IpodBodyColorLight = Color(0xFFF2F2F2)
 val IpodBodyColorDark = Color(0xFF1C1C1C)
-val IpodClickWheelColor = Color(0xFFD6D6D6)
+val IpodClickWheelColor = Color(0xFFC9C8C8)
 val IpodClickWheelTextColorLight = Color(0xFFF2F2F2)
 val IpodClickWheelTextColorDark = Color(0xFF1E1E1E)
 //val IpodTextPrimary = Color(0xFF28305E)

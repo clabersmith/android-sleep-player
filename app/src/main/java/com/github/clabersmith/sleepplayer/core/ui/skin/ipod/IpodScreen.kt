@@ -54,7 +54,7 @@ fun IpodScreen(
         soundPool.load(context, R.raw.ipod_click, 1)
     }
 
-    var size by remember { mutableStateOf(280f) }
+    var size by remember { mutableStateOf(320f) }
 
     DisposableEffect(soundPool) {
         onDispose {
@@ -65,8 +65,8 @@ fun IpodScreen(
     fun playClick() {
         soundPool.play(
             clickSoundId,
-            1f, // left volume
-            1f, // right volume
+            .1f, // left volume
+            .1f, // right volume
             0,  // priority
             0,  // loop
             1f  // playback rate

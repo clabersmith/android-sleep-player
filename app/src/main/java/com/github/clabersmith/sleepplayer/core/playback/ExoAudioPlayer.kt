@@ -12,6 +12,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,14 +35,16 @@ class ExoAudioPlayer(
             PlayerSnapshot(
                 positionMs = 0L,
                 durationMs = 0L,
-                isPlaying = false
+                isPlaying = false,
+                volume = 60
             )
         )
 
-    override val snapshotFlow: Flow<PlayerSnapshot>
+    override val snapshotFlow: StateFlow<PlayerSnapshot>
         get() = _snapshotFlow
 
     init {
+        exoPlayer.volume = 0.6f // default to 60%
         exoPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 emitSnapshot()
@@ -79,7 +82,8 @@ class ExoAudioPlayer(
         _snapshotFlow.value = PlayerSnapshot(
             positionMs = exoPlayer.currentPosition,
             durationMs = exoPlayer.duration,
-            isPlaying = exoPlayer.isPlaying
+            isPlaying = exoPlayer.isPlaying,
+            volume = exoPlayer.volume.times(100).toInt()
         )
     }
 
@@ -106,6 +110,11 @@ class ExoAudioPlayer(
 
     override fun stop() {
         exoPlayer.stop()
+    }
+
+    override fun setVolume(volume: Int) {
+        exoPlayer.volume = volume / 100f
+        _snapshotFlow.value = _snapshotFlow.value.copy(volume = volume)
     }
 
     override fun currentPosition(): Long {

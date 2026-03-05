@@ -36,8 +36,8 @@ fun LcdSurface(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFFDDE8F6),
-                        Color(0xFFBFD1EA)
+                        Color(0xFFD1E2F8),
+                        Color(0xFFBDD1ED)
                     )
                 )
             )

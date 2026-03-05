@@ -11,6 +11,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.NavDirection
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
@@ -80,24 +81,31 @@ class MenuViewModel(
 
     private var downloadJob: Job? = null
     private var scanJob: Job? = null
-
     private var playProgressJob: Job? = null
+
+    private var volumeTimeoutJob: Job? = null
     private var wasPlayingBeforeScan = false
 
     private val _activeSlot = MutableStateFlow<SlotState?>(null)
     val activeSlot: StateFlow<SlotState?> = _activeSlot
 
+    private val barMode = MutableStateFlow(
+        NowPlayingUiState.NowPlayingBarMode.TrackPosition)
+
     val nowPlayingUiState: StateFlow<NowPlayingUiState> =
         combine(
             activeSlot,
-            player.snapshotFlow
-        ) { slot, snapshot ->
+            player.snapshotFlow,
+            barMode
+        ) { slot, snapshot, mode ->
 
             NowPlayingUiState(
                 slot = slot,
                 positionMs = snapshot.positionMs,
                 durationMs = snapshot.durationMs,
-                isPlaying = snapshot.isPlaying
+                isPlaying = snapshot.isPlaying,
+                volume = snapshot.volume,
+                barMode = mode
             )
         }.stateIn(
             viewModelScope,
@@ -111,6 +119,7 @@ class MenuViewModel(
                 buildList {
                     add(HomeItem.Play)
                     add(HomeItem.Settings)
+                    add(HomeItem.Extras)
                     if (ui.slot != null) add(HomeItem.NowPlaying)
                 }
             }
@@ -130,7 +139,7 @@ class MenuViewModel(
             updateContext {
                 it.copy(
                     feeds = feeds,
-                    categories = categories,
+                    categories = categories.sortedDescending(),  //for now to have Sleep at top
                     slots = restoredSlots
                 )
             }
@@ -151,6 +160,7 @@ class MenuViewModel(
     }
 
     private fun goToNowPlaying(slot: SlotState, origin: MenuState.NowPlaying.Origin) {
+        barMode.value = NowPlayingBarMode.TrackPosition
         _menuState.value = MenuState.NowPlaying(context, slot, origin)
     }
 
@@ -198,6 +208,14 @@ class MenuViewModel(
         player.release()
     }
 
+    private fun startVolumeTimeout() {
+        volumeTimeoutJob?.cancel()
+        volumeTimeoutJob = viewModelScope.launch {
+            delay(3000)
+            barMode.value = NowPlayingBarMode.TrackPosition
+        }
+    }
+
     // -----------------------------
     // Click Wheel Movement
     // -----------------------------
@@ -236,6 +254,13 @@ class MenuViewModel(
     }
 
     fun startScanForward() {
+        // If we're in Volume mode, adjust volume instead of seeking
+        if (barMode.value == NowPlayingBarMode.Volume) {
+            adjustVolume(+5)
+            startVolumeTimeout()
+            return
+        }
+
         if (scanJob != null) return
 
         wasPlayingBeforeScan = player.isPlaying()
@@ -246,7 +271,6 @@ class MenuViewModel(
 
             while (isActive) {
                 val elapsed = System.currentTimeMillis() - startTime
-
                 val delta = computeScanDelta(elapsed)
 
                 val current = player.currentPosition()
@@ -263,6 +287,13 @@ class MenuViewModel(
     }
 
     fun startScanBack() {
+        // If we're in Volume mode, adjust volume instead of seeking
+        if (barMode.value == NowPlayingUiState.NowPlayingBarMode.Volume) {
+            adjustVolume(-5)
+            startVolumeTimeout()
+            return
+        }
+
         if (scanJob != null) return
 
         wasPlayingBeforeScan = player.isPlaying()
@@ -273,7 +304,6 @@ class MenuViewModel(
 
             while (isActive) {
                 val elapsedMs = System.currentTimeMillis() - startTime
-
                 val delta = computeScanDelta(elapsedMs)
 
                 val current = player.currentPosition()
@@ -304,6 +334,15 @@ class MenuViewModel(
         val growthRate = 0.6 // increase to accelerate growth, decrease to slow it
         val raw = minDelta * kotlin.math.exp(seconds * growthRate)
         return raw.coerceIn(minDelta, maxDelta).toLong()
+    }
+
+    private fun adjustVolume(delta: Int) {
+        val currentVolume = player.snapshotFlow.value.volume
+        val newVolume = (currentVolume + delta)
+            .coerceIn(0, 100)
+
+        player.setVolume(newVolume)
+
     }
 
     //------------------------------
@@ -340,11 +379,7 @@ class MenuViewModel(
             val selectedItem = items.getOrNull(current.selectedIndex) ?: return
 
             when (selectedItem) {
-                HomeItem.Play -> {
-                    dispatch(MenuEvent.Confirm)
-                }
-
-                HomeItem.Settings -> {
+                HomeItem.Play, HomeItem.Settings, HomeItem.Extras -> {
                     dispatch(MenuEvent.Confirm)
                 }
 
@@ -355,10 +390,32 @@ class MenuViewModel(
             }
 
             return
+        } else if (current is MenuState.NowPlaying) {
+            //if NowPlaying is selected, we want to toggle between track position and volume controls
+            onNowPlayingConfirmPressed()
         }
 
         dispatch(MenuEvent.Confirm)
     }
+
+    fun onNowPlayingConfirmPressed() {
+        barMode.update {
+            when (it) {
+                NowPlayingBarMode.TrackPosition -> {
+                    startVolumeTimeout()
+                    NowPlayingBarMode.Volume
+                }
+
+                NowPlayingBarMode.Volume -> {
+                    NowPlayingBarMode.TrackPosition
+                }
+            }
+        }
+    }
+
+    //------------------------------
+    // Episode Download Management
+    //------------------------------
 
     fun startDownload(state: MenuState.EpisodeDetail) {
         if (state.isDownloading) return
@@ -606,15 +663,23 @@ data class NowPlayingUiState(
     val slot: SlotState?,
     val positionMs: Long,
     val durationMs: Long,
-    val isPlaying: Boolean
+    val isPlaying: Boolean,
+    val volume: Int,
+    val barMode: NowPlayingBarMode = NowPlayingBarMode.TrackPosition
 ) {
     companion object {
         val EMPTY = NowPlayingUiState(
             slot = null,
             positionMs = 0L,
             durationMs = 0L,
-            isPlaying = false
+            isPlaying = false,
+            volume = 50
         )
+    }
+
+    enum class NowPlayingBarMode {
+        TrackPosition,
+        Volume
     }
 }
 
@@ -622,6 +687,7 @@ sealed class HomeItem {
     object Play : HomeItem()
     object NowPlaying : HomeItem()
     object Settings : HomeItem()
+    object Extras : HomeItem()
 }
 
 
