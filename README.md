@@ -11,10 +11,10 @@ The goal of this project was not simply to build a podcast player, but to explor
 # Demo
 
 ### Episode Download
-![Download Demo](docs/download-demo.gif)
+<img src="docs/download-demo.gif" width="280">
 
 ### Playback Interaction
-![Playback Demo](docs/playback-demo.gif)
+<img src="docs/playback-demo.gif" width="280">
 
 ---
 
