@@ -79,21 +79,21 @@ class MenuViewModelTest() {
 
     @Test
     fun `rotate backward wraps to last index`() = runTest {
-        val viewModel = createNewViewModel()  // Home menu has 2 items, so index 0-1
+        val viewModel = createNewViewModel()  // Home menu has 3 items, so index 0-2
         advanceUntilIdle()
 
         viewModel.moveSelection(-1)
 
         val state = viewModel.menuState.value
-        assertEquals(1, state.selectedIndex)
+        assertEquals(2, state.selectedIndex)
     }
 
     @Test
     fun `forward wrap goes to zero`() = runTest {
-        val viewModel = createNewViewModel() // Home menu has 2 items, so index 0-1
+        val viewModel = createNewViewModel() // Home menu has 3 items, so index 0-2
         advanceUntilIdle()
 
-        viewModel.moveSelection(2)
+        viewModel.moveSelection(3)
 
         assertEquals(0, viewModel.menuState.value.selectedIndex)
     }
@@ -311,14 +311,9 @@ class MenuViewModelTest() {
 
         advanceUntilIdle()
 
-        println("test context.slots: ${viewModel.menuState.value.context.slots}")
-        println("test context.slots.size: ${viewModel.menuState.value.context.slots.size}")
-
         navigateToNowPlaying(viewModel)
 
         advanceUntilIdle()
-
-        println("menu state: ${viewModel.menuState.value}")
 
         viewModel.onPlayPauseShortPressed()
 
@@ -341,8 +336,6 @@ class MenuViewModelTest() {
         advanceUntilIdle()
 
         val state = viewModel.nowPlayingUiState.value
-
-        println("nowPlayingUiState: ${viewModel.nowPlayingUiState.value}")
 
         assertTrue(state.isPlaying)
 

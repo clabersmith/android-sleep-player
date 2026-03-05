@@ -33,10 +33,6 @@ sealed class MenuState() {
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        init {
-            println("Home constructed: selectedIndex=$selectedIndex")
-        }
-
         override val itemCount: Int get() = 0 //not used, Home has dynamic items based on now playing state
 
         override val title = "Menu"
@@ -46,8 +42,6 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
-
-            println("Home reducer called with event: $event, selectedIndex: $selectedIndex")
 
             handleCommonEvents(event)?.let { return it }
 
@@ -160,8 +154,6 @@ sealed class MenuState() {
                     val hasAddNew = slotCount < context.maxSlotsCount
                     val addNewIndex = slotCount
 
-                    println("hasAddNew: $hasAddNew, addNewIndex: $addNewIndex, selectedIndex: $selectedIndex")
-
                     when {
                         hasAddNew && selectedIndex == addNewIndex ->
                             MenuTransition(
@@ -222,8 +214,6 @@ sealed class MenuState() {
 
                 MenuEvent.Confirm -> {
                     val category = context.categories[selectedIndex]
-
-                    println("feeds ${context.feeds} category $category")
 
                     val categoryFeeds = context.feeds
                         .filter { it.category == category }
@@ -493,8 +483,6 @@ sealed class MenuState() {
 
                     val slot = context.slots[selectedIndex]
 
-                    println("NowPlaying state created with slot: $slot")
-
                     MenuTransition(
                         newState = NowPlaying(
                             context = context,
@@ -534,7 +522,6 @@ sealed class MenuState() {
         override fun withContext(context: MenuContext) = copy(context = context)
 
         override fun reduce(event: MenuEvent): MenuTransition {
-            println("NowPlaying reducer called with slot: $slot")
             handleCommonEvents(event)?.let { return it }
 
             return when (event) {

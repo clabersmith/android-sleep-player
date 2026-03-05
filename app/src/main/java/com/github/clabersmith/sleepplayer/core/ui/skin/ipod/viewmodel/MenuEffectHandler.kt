@@ -4,8 +4,6 @@ import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
-import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
-import kotlinx.coroutines.CoroutineScope
 
 
 /**

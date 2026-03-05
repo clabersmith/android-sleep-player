@@ -14,15 +14,18 @@ class FakePodcastPlayer : AudioPlayer {
     var stopCalled = false
     var lastSeekPosition: Long = 0L
 
+    var volumeSet: Int = 0
+
     private val _snapshotFlow = MutableStateFlow(
         PlayerSnapshot(
             positionMs = 0L,
             durationMs = 60_000L,
-            isPlaying = false
+            isPlaying = false,
+            volume = 60
         )
     )
 
-    override val snapshotFlow: Flow<PlayerSnapshot>
+    override val snapshotFlow: StateFlow<PlayerSnapshot>
         get() = _snapshotFlow
 
     var currentPosition: Long = 0L
@@ -51,6 +54,10 @@ class FakePodcastPlayer : AudioPlayer {
         emitSnapshot()
     }
 
+    override fun setVolume(volume: Int) {
+        volumeSet = volume
+    }
+
     override fun seekTo(positionMs: Long) {
         lastSeekPosition = positionMs
         currentPosition = positionMs
@@ -69,7 +76,8 @@ class FakePodcastPlayer : AudioPlayer {
         _snapshotFlow.value = PlayerSnapshot(
             positionMs = currentPosition,
             durationMs = duration,
-            isPlaying = isPlaying
+            isPlaying = isPlaying,
+            volume = volumeSet
         )
     }
 }

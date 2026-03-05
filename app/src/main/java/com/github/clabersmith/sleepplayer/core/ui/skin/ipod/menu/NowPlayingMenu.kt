@@ -39,8 +39,6 @@ fun NowPlayingMenu(
     nowPlayingUiState: NowPlayingUiState
 ) {
 
-    println("loading with slot ${state.slot} and playback state ${nowPlayingUiState.slot}")
-
     val isActiveTrack =
         nowPlayingUiState.slot == state.slot
 

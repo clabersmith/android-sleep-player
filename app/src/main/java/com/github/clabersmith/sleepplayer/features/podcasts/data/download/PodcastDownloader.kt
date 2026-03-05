@@ -3,11 +3,9 @@ package com.github.clabersmith.sleepplayer.features.podcasts.data.download
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.get
 import io.ktor.client.request.prepareGet
 import io.ktor.http.contentLength
 import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.jvm.javaio.copyTo
 import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.ensureActive
 import java.io.File

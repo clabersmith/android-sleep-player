@@ -139,15 +139,12 @@ class MenuViewModel(
             updateContext {
                 it.copy(
                     feeds = feeds,
-                    categories = categories.sortedDescending(),  //for now to have Sleep at top
+                    categories = categories,
                     slots = restoredSlots
                 )
             }
             // Start at Home screen after loading data
             _menuState.value = MenuState.Home(context)
-
-            println("Loaded slots: ${context.slots}")
-            println("Home created with slots: ${context.slots.size}")
         }
 
     }
@@ -186,12 +183,7 @@ class MenuViewModel(
         _menuState.value = transition.newState
         _navDirection.value = transition.direction
 
-        println("Transitioned " +
-                "from ${current::class.simpleName} to ${transition.newState::class.simpleName} " +
-                "on event ${event::class.simpleName}")
-
         transition.effects.forEach {
-            println("Handling effect ${it::class.simpleName}")
             effectHandler.handle(it)
         }
     }
@@ -374,7 +366,6 @@ class MenuViewModel(
         val current = _menuState.value
 
         if (current is MenuState.Home) {
-            println("Confirming selection on Home screen")
             val items = homeItemsFlow.value
             val selectedItem = items.getOrNull(current.selectedIndex) ?: return
 
@@ -519,7 +510,6 @@ class MenuViewModel(
     }
 
     fun checkStartPlayback(slot: SlotState) {
-        println("Checking playback for slot ${slot.feedName} - ${slot.loadedEpisode.title}")
         if (_activeSlot.value != slot) {
 
             viewModelScope.launch {

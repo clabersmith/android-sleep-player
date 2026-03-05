@@ -74,5 +74,4 @@ fun TestScope.navigateToNowPlaying(
 fun TestScope.click(viewModel: MenuViewModel) {
     viewModel.confirmSelection()
     advanceUntilIdle()
-    //println("click menuState result: ${viewModel.menuState.value}")
 }
