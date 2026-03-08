@@ -367,7 +367,7 @@ sealed class MenuState() {
         val origin: Origin,
         override val selectedIndex: Int = 0
     ) : MenuState() {
-        override val itemCount: Int get() = actionRows.size
+        override val itemCount: Int get() = 0  //not used, EpisodeDetail has dynamic items based on episode info and download state
 
         override val title = "Episode Detail"
 
@@ -427,11 +427,20 @@ sealed class MenuState() {
                 }
 
                 MenuEvent.MenuShortPress -> {
-                    when (origin) {
-                        Origin.DOWNLOAD -> MenuTransition(
-                            Download(context)
-                        )
 
+                    if (isDownloading) {
+                        return MenuTransition(
+                            newState = copy(
+                                isDownloading = false,
+                                actionRows = listOf(ActionRow.Download),
+                                selectedIndex = 0
+                            ),
+                            effects = listOf(MenuEffect.CancelDownload(this))
+                        )
+                    }
+
+                    when (origin) {
+                        Origin.DOWNLOAD -> MenuTransition(Download(context))
                         Origin.EPISODES -> MenuTransition(
                             Episodes(
                                 context = context,
@@ -442,7 +451,6 @@ sealed class MenuState() {
                             ),
                             direction = NavDirection.Back
                         )
-
                         else -> MenuTransition(this)
                     }
                 }

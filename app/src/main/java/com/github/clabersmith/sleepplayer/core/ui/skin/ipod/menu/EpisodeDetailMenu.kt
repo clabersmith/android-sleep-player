@@ -28,10 +28,17 @@ fun EpisodeDetailMenu(
 ) {
     val episode = state.episode
 
+    //display a good preview of the description, truncating if it's too long
+    val descriptionPreview = if (episode.description.length > 200) {
+        episode.description.take(200)
+    } else {
+        episode.description
+    }
+
     val staticItems = listOf(
         episode.title,
         "",
-        episode.description.take(120),
+        descriptionPreview,
         ""
     )
 
