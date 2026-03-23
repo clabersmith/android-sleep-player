@@ -4,7 +4,7 @@ A Jetpack Compose demo application that recreates the tactile interaction model 
 
 The project combines **gesture-driven UI**, **state machine navigation**, and **media playback** to recreate the experience of browsing and playing sleep podcast episodes using a virtual click wheel.
 
-The goal of this project was not simply to build a podcast player, but to explore how classic hardware interaction models can be implemented using modern Android technologies such as **Jetpack Compose**, **Material 3**, and **reactive state management**.
+The goal of this project was not just to build a podcast player, but to explore how classic hardware interaction models can be implemented using modern Android technologies such as **Jetpack Compose**, **Material 3**, and **reactive state management**.
 
 ---
 
@@ -180,9 +180,9 @@ Minimum Android version and other configuration details can be found in the Grad
 
 Possible directions for extending the project include:
 
+- a companion cloud-based service to refresh the custom sleep podcasts feed daily ( ✅ Completed ) 
 - white noise, automatic volume fade-in/out and sleep timer extras
 - custom settings colors, click wheel sound effect, etc.
-- a companion cloud-based service to refresh the custom sleep podcasts feed daily
 - at least one additional retro UI skin besides Ipod
 - music playback
 
