@@ -1,5 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
+import com.github.clabersmith.sleepplayer.R
+import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 
@@ -56,12 +58,18 @@ sealed class MenuState() {
 
                         1 ->
                             MenuTransition(
-                                newState = this
+                                newState = WhiteNoisePlay(context),
+                                direction = NavDirection.Forward
                             )
 
                         2 ->
                             MenuTransition(
-                                newState = this
+                                newState = this   //Settings
+                            )
+
+                        3 ->
+                            MenuTransition(
+                                newState = this   //Extras
                             )
 
                         else -> MenuTransition(this)
@@ -558,6 +566,67 @@ sealed class MenuState() {
         }
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+    }
+
+    data class WhiteNoisePlay(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0,
+        val playingIndex: Int? = null
+    ) : MenuState() {
+
+        private val tracks = listOf(
+            "Phase" to WhiteNoiseTrack(R.raw.phase),
+            "Hypnag" to WhiteNoiseTrack(R.raw.hypnag),
+            "Air Conditioner" to WhiteNoiseTrack(R.raw.ac),
+            "Box Fan" to WhiteNoiseTrack(R.raw.boxfan),
+            "Metal Fan" to WhiteNoiseTrack(R.raw.metalfan),
+            "Brown" to WhiteNoiseTrack(R.raw.brown),
+            "Pink" to WhiteNoiseTrack(R.raw.pink),
+            "Green" to WhiteNoiseTrack(R.raw.green)
+        )
+
+        override val itemCount: Int get() = tracks.size
+
+        override val title = "White Noise"
+
+        override fun copyWithIndex(newIndex: Int) =
+            copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) =
+            copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+
+            handleCommonEvents(event)?.let { return it }
+
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+
+                    val track = tracks[selectedIndex].second
+                    val currentTrack = context.currentWhiteNoiseTrack
+
+                    if (track == currentTrack) {
+                        MenuTransition(
+                            newState = this, // no UI change
+                            effects = listOf(MenuEffect.StopWhiteNoise)
+                        )
+                    } else {
+                        MenuTransition(
+                            newState = this, // no UI change
+                            effects = listOf(MenuEffect.StartWhiteNoise(track))
+                        )
+                    }
+                }
+
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    Home(context, selectedIndex = 1), // returns to White Noise slot
+                    direction = NavDirection.Back
+                )
+
+                else -> MenuTransition(this)
+            }
+        }
     }
 
 }

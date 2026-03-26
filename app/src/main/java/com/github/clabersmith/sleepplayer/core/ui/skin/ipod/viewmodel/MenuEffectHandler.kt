@@ -1,6 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
+import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
@@ -27,6 +28,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
  */
 class MenuEffectHandler(
     private val player: AudioPlayer,
+    private val whiteNoisePlayer: WhiteNoisePlayer,
     private val startDownload: (state: MenuState.EpisodeDetail) -> Unit,
     private val cancelDownload: (state: MenuState.EpisodeDetail) -> Unit,
     private val deleteEpisode: (state: MenuState.EpisodeDetail) -> Unit,
@@ -38,6 +40,11 @@ class MenuEffectHandler(
 ) {
     fun handle(effect: MenuEffect) {
         when (effect) {
+
+            // -----------------------------
+            // Playback effects
+            // -----------------------------
+
             is MenuEffect.CheckStartPlayback -> {
                 checkStartPlayback(effect.slot)
             }
@@ -53,6 +60,26 @@ class MenuEffectHandler(
             is MenuEffect.StopPlayback -> {
                 player.stop()
             }
+
+            // -----------------------------
+            // White Noise effects
+            // -----------------------------
+
+            is MenuEffect.StartWhiteNoise -> {
+                whiteNoisePlayer.play(effect.track)
+            }
+
+            is MenuEffect.StopWhiteNoise -> {
+                whiteNoisePlayer.stop()
+            }
+
+            is MenuEffect.SetWhiteNoiseVolume -> {
+                whiteNoisePlayer.setVolume(effect.volume)
+            }
+
+            // -----------------------------
+            // Scan effects
+            // -----------------------------
 
             is MenuEffect.StartScanForward -> {
                 startScanForward()

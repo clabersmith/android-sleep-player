@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
+import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
+import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuContext
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.exp
 
 /**
  * ViewModel driving the iPod-style menu and playback UI.
@@ -63,7 +66,8 @@ class MenuViewModel(
     private val slotRepository: SlotRepository,
     private val downloader: Downloader,
     private val storage: FileStorage,
-    private val player: AudioPlayer
+    private val player: AudioPlayer,
+    private val whiteNoisePlayer: WhiteNoisePlayer
 ) : ViewModel() {
 
     private var context = MenuContext(
@@ -90,7 +94,7 @@ class MenuViewModel(
     val activeSlot: StateFlow<SlotState?> = _activeSlot
 
     private val barMode = MutableStateFlow(
-        NowPlayingUiState.NowPlayingBarMode.TrackPosition)
+        NowPlayingBarMode.TrackPosition)
 
     val nowPlayingUiState: StateFlow<NowPlayingUiState> =
         combine(
@@ -113,11 +117,26 @@ class MenuViewModel(
             NowPlayingUiState.EMPTY
         )
 
+    val whiteNoiseUiState: StateFlow<WhiteNoiseUiState> =
+        whiteNoisePlayer.snapshotFlow
+            .map {
+                WhiteNoiseUiState(
+                    isPlaying = it.isPlaying,
+                    volume = it.volume,
+                    currentTrack = it.currentTrack
+                )
+            }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                WhiteNoiseUiState()
+            )
     val homeItemsFlow: StateFlow<List<HomeItem>> =
         nowPlayingUiState
             .map { ui ->
                 buildList {
                     add(HomeItem.Play)
+                    add(HomeItem.WhiteNoise)
                     add(HomeItem.Settings)
                     add(HomeItem.Extras)
                     if (ui.slot != null) add(HomeItem.NowPlaying)
@@ -127,6 +146,7 @@ class MenuViewModel(
 
     init {
         load()
+        observeWhiteNoise()
     }
 
     // Initial load of feeds, categories and persisted download slots
@@ -149,6 +169,23 @@ class MenuViewModel(
 
     }
 
+    private fun observeWhiteNoise() {
+        viewModelScope.launch {
+            whiteNoiseUiState.collect { wnState ->
+
+                updateContext { current ->
+                    if (current.currentWhiteNoiseTrack == wnState.currentTrack) {
+                        current // no-op to avoid unnecessary recomposition
+                    } else {
+                        current.copy(
+                            currentWhiteNoiseTrack = wnState.currentTrack
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     private fun updateContext(transform: (MenuContext) -> MenuContext) {
         context = transform(context)
 
@@ -164,6 +201,7 @@ class MenuViewModel(
     // Effect handler that executes side effects emitted by menu state transitions
     private val effectHandler = MenuEffectHandler(
         player = player,
+        whiteNoisePlayer = whiteNoisePlayer,
         startDownload = { state -> startDownload(state) },
         cancelDownload = { state -> cancelDownload(state) },
         deleteEpisode = { state -> deleteEpisode(state) },
@@ -171,7 +209,7 @@ class MenuViewModel(
         checkStartPlayback = { slot -> checkStartPlayback(slot) },
         startScanForward = { startScanForward() },
         startScanBack = { startScanBack() },
-        stopScan = { stopScan() },
+        stopScan = { stopScan() }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
@@ -280,7 +318,7 @@ class MenuViewModel(
 
     fun startScanBack() {
         // If we're in Volume mode, adjust volume instead of seeking
-        if (barMode.value == NowPlayingUiState.NowPlayingBarMode.Volume) {
+        if (barMode.value == NowPlayingBarMode.Volume) {
             adjustVolume(-5)
             startVolumeTimeout()
             return
@@ -324,7 +362,7 @@ class MenuViewModel(
         val maxDelta = 45_000.0
         val seconds = (elapsed / 1000.0).coerceAtLeast(0.0)
         val growthRate = 0.6 // increase to accelerate growth, decrease to slow it
-        val raw = minDelta * kotlin.math.exp(seconds * growthRate)
+        val raw = minDelta * exp(seconds * growthRate)
         return raw.coerceIn(minDelta, maxDelta).toLong()
     }
 
@@ -370,7 +408,7 @@ class MenuViewModel(
             val selectedItem = items.getOrNull(current.selectedIndex) ?: return
 
             when (selectedItem) {
-                HomeItem.Play, HomeItem.Settings, HomeItem.Extras -> {
+                HomeItem.Play, HomeItem.WhiteNoise, HomeItem.Settings, HomeItem.Extras -> {
                     dispatch(MenuEvent.Confirm)
                 }
 
@@ -673,8 +711,15 @@ data class NowPlayingUiState(
     }
 }
 
+data class WhiteNoiseUiState(
+    val isPlaying: Boolean = false,
+    val volume: Int = 60,
+    val currentTrack: WhiteNoiseTrack? = null
+)
+
 sealed class HomeItem {
     object Play : HomeItem()
+    object WhiteNoise : HomeItem()
     object NowPlaying : HomeItem()
     object Settings : HomeItem()
     object Extras : HomeItem()

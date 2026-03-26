@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.github.clabersmith.sleepplayer.R
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuHighlight
@@ -40,6 +41,7 @@ fun MenuRow(
             maxLines = 1,
             overflow = TextOverflow.Clip,
             style = IpodMenuText,
+            fontSize = 18.sp,
             color = if (selected) Color.White else IpodTextPrimary.copy(alpha = 0.85f),
             modifier = Modifier
                 .weight(1f)
@@ -54,6 +56,16 @@ fun MenuRow(
                     else Modifier
                 )
         )
+
+        // Checkmark
+        if (item.isChecked) {
+            Text(
+                text = "✓",
+                style = IpodMenuText,
+                color = if (selected) Color.White else IpodTextPrimary,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
 
         if (item.showChevron) {
             Icon(

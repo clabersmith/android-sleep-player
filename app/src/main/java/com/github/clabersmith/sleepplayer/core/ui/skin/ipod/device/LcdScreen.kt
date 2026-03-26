@@ -31,9 +31,11 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.HomeMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.NowPlayingMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PlayMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PodcastsMenu
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.WhiteNoiseMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.NavDirection
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.WhiteNoiseUiState
 import kotlin.math.min
 
 @SuppressLint("UnusedContentLambdaTargetStateParameter")
@@ -41,6 +43,7 @@ import kotlin.math.min
 fun LcdScreen(
     menuState: MenuState,
     nowPlayingUiState: NowPlayingUiState,
+    whiteNoiseUiState: WhiteNoiseUiState,
     navDirection: NavDirection,
     modifier: Modifier = Modifier
 ) {
@@ -73,7 +76,8 @@ fun LcdScreen(
                 // Dynamic header
                 Header(
                     menuState,
-                    nowPlayingUiState
+                    nowPlayingUiState,
+                    whiteNoiseUiState
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -180,5 +184,7 @@ private fun RenderMenu(
             menuState,
             nowPlayingUiState
         )
+
+        is MenuState.WhiteNoisePlay -> WhiteNoiseMenu(menuState)
     }
 }

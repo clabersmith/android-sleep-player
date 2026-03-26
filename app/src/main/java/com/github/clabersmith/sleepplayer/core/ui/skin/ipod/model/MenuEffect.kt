@@ -1,5 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
+import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState.EpisodeDetail
 
 /**
@@ -33,6 +34,14 @@ sealed interface MenuEffect {
     data object TogglePlayPause : MenuEffect
 
     data object StopPlayback : MenuEffect
+
+    // -----------------------------
+    // White Noise effects
+    // -----------------------------
+
+    data class StartWhiteNoise(val track: WhiteNoiseTrack) : MenuEffect
+    object StopWhiteNoise : MenuEffect
+    data class SetWhiteNoiseVolume(val volume: Int) : MenuEffect
 
     // -----------------------------
     // Scan effects

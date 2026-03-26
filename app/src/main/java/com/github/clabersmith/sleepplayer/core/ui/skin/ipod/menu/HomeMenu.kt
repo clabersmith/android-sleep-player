@@ -18,6 +18,10 @@ fun HomeMenu(
     )
 
     items.add(
+        MenuItem(title = "White Noise", showChevron = true)
+    )
+
+    items.add(
         MenuItem(title = "Settings", showChevron = true)
     )
 

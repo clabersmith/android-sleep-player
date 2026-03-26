@@ -4,6 +4,8 @@ import android.content.Context
 import com.github.clabersmith.sleepplayer.core.data.datastore.slotDataStore
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.ExoAudioPlayer
+import com.github.clabersmith.sleepplayer.core.playback.ExoWhiteNoisePlayer
+import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlotRepository
@@ -33,4 +35,6 @@ class AppContainer(context: Context) {
         = PersistedSlotRepository(context.slotDataStore)
 
     val audioPlayer: AudioPlayer = ExoAudioPlayer(context)
+
+    val whiteNoisePlayer: WhiteNoisePlayer = ExoWhiteNoisePlayer(context)
 }

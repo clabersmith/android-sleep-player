@@ -3,10 +3,13 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -25,36 +28,60 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.WhiteNoiseUiState
 
 @Composable
 fun Header(
     menuState: MenuState,
-    nowPlayingUiState: NowPlayingUiState
+    nowPlayingUiState: NowPlayingUiState,
+    whiteNoiseUiState: WhiteNoiseUiState
 ) {
+
     Column {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(28.dp),
-            contentAlignment = Alignment.Center
+                .height(28.dp)
         ) {
-            if (nowPlayingUiState.slot != null) {
-                NowPlayingPlayIcon(
-                    isPlaying = nowPlayingUiState.isPlaying,
-                    color = IpodTextPrimary,
-                    iconSize = 20.dp,
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 8.dp)
-                )
+
+            // LEFT ICON GROUP
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                if (nowPlayingUiState.slot != null) {
+                    NowPlayingPlayIcon(
+                        isPlaying = nowPlayingUiState.isPlaying,
+                        color = IpodTextPrimary,
+                        iconSize = 20.dp,
+                        modifier = Modifier.padding(end = 4.dp) // spacing AFTER play icon
+                    )
+                }
+
+                if (whiteNoiseUiState.isPlaying) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_white_noise),
+                        contentDescription = "White noise active",
+                        modifier = Modifier.size(20.dp).padding(end = 1.dp),
+                        tint = IpodTextPrimary
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp)) // spacing AFTER white noise icon
+                }
             }
 
+            // CENTER TITLE
             Text(
                 text = menuState.title,
                 style = IpodMenuText,
-                color = IpodTextPrimary
+                color = IpodTextPrimary,
+                modifier = Modifier.align(Alignment.Center)
             )
 
+            // RIGHT BATTERY
             Icon(
                 painter = painterResource(R.drawable.ic_ipod_battery_full),
                 contentDescription = "Battery",
