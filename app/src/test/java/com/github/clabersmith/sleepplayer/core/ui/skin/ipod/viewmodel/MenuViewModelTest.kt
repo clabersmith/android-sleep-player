@@ -20,6 +20,7 @@ import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisod
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownloaded
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToFeedsMenu
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToNowPlaying
+import com.github.clabersmith.sleepplayer.testutil.playback.FakeWhiteNoisePlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -45,6 +46,8 @@ class MenuViewModelTest() {
     private lateinit var fakeFileStorage : FakeFileStorage
     private lateinit var fakePodcastPlayer : FakePodcastPlayer
 
+    private lateinit var fakeWhiteNoisePlayer: FakeWhiteNoisePlayer
+
     @Before
     fun setup() {
         //setup new text fixture for each test to ensure clean state
@@ -53,6 +56,7 @@ class MenuViewModelTest() {
         fakeDownloaderSuccess = FakeDownloaderSuccess()
         fakeFileStorage = FakeFileStorage()
         fakePodcastPlayer = FakePodcastPlayer()
+        fakeWhiteNoisePlayer = FakeWhiteNoisePlayer()
     }
 
     @Test
@@ -79,21 +83,21 @@ class MenuViewModelTest() {
 
     @Test
     fun `rotate backward wraps to last index`() = runTest {
-        val viewModel = createNewViewModel()  // Home menu has 3 items, so index 0-2
+        val viewModel = createNewViewModel()  // Home menu has 4 items, so index 0-3
         advanceUntilIdle()
 
         viewModel.moveSelection(-1)
 
         val state = viewModel.menuState.value
-        assertEquals(2, state.selectedIndex)
+        assertEquals(3, state.selectedIndex)
     }
 
     @Test
     fun `forward wrap goes to zero`() = runTest {
-        val viewModel = createNewViewModel() // Home menu has 3 items, so index 0-2
+        val viewModel = createNewViewModel() // Home menu has 4 items, so index 0-3
         advanceUntilIdle()
 
-        viewModel.moveSelection(3)
+        viewModel.moveSelection(4)
 
         assertEquals(0, viewModel.menuState.value.selectedIndex)
     }
@@ -438,7 +442,8 @@ class MenuViewModelTest() {
             slotRepository = fakePersistedSlotRepository,
             downloader = downloader,
             storage = fakeFileStorage,
-            player = fakePodcastPlayer
+            player = fakePodcastPlayer,
+            whiteNoisePlayer = fakeWhiteNoisePlayer
         )
 
     private suspend fun persistFakeSlot() {
