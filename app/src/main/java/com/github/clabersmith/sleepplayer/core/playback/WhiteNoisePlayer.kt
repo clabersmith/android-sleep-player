@@ -15,6 +15,10 @@ interface WhiteNoisePlayer {
     fun isPlaying(): Boolean
 
     fun release()
+
+    fun setVolume(volume: Float)
+
+    fun getVolume(): Float
 }
 
 data class WhiteNoiseTrack(

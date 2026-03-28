@@ -85,6 +85,14 @@ class ExoWhiteNoisePlayer(
         exoPlayer.release()
     }
 
+    override fun setVolume(volume: Float) {
+        exoPlayer.volume = volume.coerceIn(0f, 1f)
+    }
+
+    override fun getVolume(): Float {
+        return exoPlayer.volume
+    }
+
     private fun emitSnapshot() {
         val snapshot = WhiteNoiseSnapshot(
             isPlaying = exoPlayer.isPlaying,

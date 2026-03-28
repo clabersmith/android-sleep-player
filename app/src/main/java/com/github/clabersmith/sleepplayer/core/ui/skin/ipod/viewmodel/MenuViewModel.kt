@@ -2,6 +2,7 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
@@ -143,6 +144,12 @@ class MenuViewModel(
                 }
             }
             .stateIn(viewModelScope, SharingStarted.Eagerly, listOf(HomeItem.Play, HomeItem.Settings))
+
+    private val audioDuckingCoordinator = AudioDuckingCoordinator(
+        nowPlayingUiState = nowPlayingUiState,
+        whiteNoisePlayer = whiteNoisePlayer,
+        scope = viewModelScope
+    )
 
     init {
         load()
