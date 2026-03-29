@@ -1,5 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
+import android.util.Log
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
@@ -12,6 +14,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuContext
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.NavDirection
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode
@@ -27,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -75,6 +79,7 @@ class MenuViewModel(
         slots = emptyList(),
         feeds = emptyList(),
         categories = emptyList(),
+        playbackSettings = PlaybackSettings(),
         maxSlotsCount = 4 // This is a fixed limit for the number of download slots, it can be adjusted as needed.
     )
 
@@ -145,9 +150,20 @@ class MenuViewModel(
             }
             .stateIn(viewModelScope, SharingStarted.Eagerly, listOf(HomeItem.Play, HomeItem.Settings))
 
+    val playbackSettingsFlow: StateFlow<PlaybackSettings> =
+        menuState
+            .map { it.context.playbackSettings }
+            .distinctUntilChanged()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                context.playbackSettings
+            )
+
     private val audioDuckingCoordinator = AudioDuckingCoordinator(
         nowPlayingUiState = nowPlayingUiState,
         whiteNoisePlayer = whiteNoisePlayer,
+        playbackSettings = playbackSettingsFlow,
         scope = viewModelScope
     )
 
@@ -200,6 +216,16 @@ class MenuViewModel(
         _menuState.value = current.withContext(context)
     }
 
+    private fun updatePlaybackSettings(
+        transform: (PlaybackSettings) -> PlaybackSettings
+    ) {
+        updateContext {
+            it.copy(
+                playbackSettings = transform(it.playbackSettings)
+            )
+        }
+    }
+
     private fun goToNowPlaying(slot: SlotState, origin: MenuState.NowPlaying.Origin) {
         barMode.value = NowPlayingBarMode.TrackPosition
         _menuState.value = MenuState.NowPlaying(context, slot, origin)
@@ -216,7 +242,10 @@ class MenuViewModel(
         checkStartPlayback = { slot -> checkStartPlayback(slot) },
         startScanForward = { startScanForward() },
         startScanBack = { startScanBack() },
-        stopScan = { stopScan() }
+        stopScan = { stopScan() },
+        updatePlaybackSettings = { transform ->
+            updatePlaybackSettings(transform)
+        }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,

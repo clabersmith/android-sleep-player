@@ -64,7 +64,8 @@ sealed class MenuState() {
 
                         2 ->
                             MenuTransition(
-                                newState = this   //Settings
+                                newState = Settings(context),
+                                direction = NavDirection.Forward
                             )
 
                         3 ->
@@ -629,4 +630,107 @@ sealed class MenuState() {
         }
     }
 
+    data class Settings(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
+        private val items = listOf(
+            SettingsItem.DuckVolume,
+            SettingsItem.AutoFade,
+            SettingsItem.AutoStop
+        )
+
+        override val itemCount: Int get() = items.size
+
+        override val title: String = "Settings"
+
+        override fun copyWithIndex(newIndex: Int) =
+            copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) =
+            copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+
+            // Override scan behavior (DO NOT call handleCommonEvents for scan)
+            when (event) {
+                MenuEvent.ScanForwardDown -> {
+                    return MenuTransition(
+                        newState = this,
+                        effects = listOf(
+                            MenuEffect.UpdatePlaybackSettings { current ->
+                                adjustSetting(current, +1)
+                            }
+                        )
+                    )
+                }
+
+                MenuEvent.ScanBackDown -> {
+                    return MenuTransition(
+                        newState = this,
+                        effects = listOf(
+                            MenuEffect.UpdatePlaybackSettings { current ->
+                                adjustSetting(current, -1)
+                            }
+                        )
+                    )
+                }
+
+                MenuEvent.MenuLongPress ->
+                    return MenuTransition(Home(context))
+
+                else -> {}
+            }
+
+            return when (event) {
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    newState = Home(context, selectedIndex = 2),
+                    direction = NavDirection.Back
+                )
+
+                else -> MenuTransition(this)
+            }
+        }
+
+        private fun adjustSetting(
+            settings: PlaybackSettings,
+            delta: Int
+        ): PlaybackSettings {
+            return when (items[selectedIndex]) {
+                SettingsItem.DuckVolume -> {
+                    val updated = (settings.duckVolumePercent + delta * 10)
+                        .coerceIn(0, 100)
+
+                    settings.copy(duckVolumePercent = updated)
+                }
+
+                SettingsItem.AutoFade -> {
+                    val values = (1..20).toList()
+                    val index = settings.autoFadeMinutes?.let { values.indexOf(it) } ?: -1
+                    val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
+
+                    val updated = if (newIndex == -1) null else values[newIndex]
+
+                    settings.copy(autoFadeMinutes = updated)
+                }
+
+                SettingsItem.AutoStop -> {
+                    val values = listOf(5, 10, 15, 20, 25)
+                    val index = settings.autoStopMinutes?.let { values.indexOf(it) } ?: -1
+                    val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
+
+                    val updated = if (newIndex == -1) null else values[newIndex]
+
+                    settings.copy(autoStopMinutes = updated)
+                }
+            }
+        }
+
+        sealed class SettingsItem {
+            object DuckVolume : SettingsItem()
+            object AutoFade : SettingsItem()
+            object AutoStop : SettingsItem()
+        }
+    }
 }

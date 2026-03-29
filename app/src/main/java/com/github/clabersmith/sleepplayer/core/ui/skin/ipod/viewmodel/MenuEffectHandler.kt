@@ -4,6 +4,7 @@ import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 
 
@@ -37,6 +38,7 @@ class MenuEffectHandler(
     private val startScanForward: () -> Unit,
     private val startScanBack: () -> Unit,
     private val stopScan: () -> Unit,
+    private val updatePlaybackSettings: ( (PlaybackSettings) -> PlaybackSettings ) -> Unit
 ) {
     fun handle(effect: MenuEffect) {
         when (effect) {
@@ -104,6 +106,10 @@ class MenuEffectHandler(
 
             is MenuEffect.GoToNowPlaying -> {
                 goToNowPlaying(effect.slot, effect.origin)
+            }
+
+            is MenuEffect.UpdatePlaybackSettings -> {
+                updatePlaybackSettings(effect.transform)
             }
         }
     }

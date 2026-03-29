@@ -42,6 +42,10 @@ sealed interface MenuEffect {
     data class StartWhiteNoise(val track: WhiteNoiseTrack) : MenuEffect
     object StopWhiteNoise : MenuEffect
     data class SetWhiteNoiseVolume(val volume: Int) : MenuEffect
+    data class UpdatePlaybackSettings(
+        val transform: (PlaybackSettings) -> PlaybackSettings
+    ) : MenuEffect
+
 
     // -----------------------------
     // Scan effects

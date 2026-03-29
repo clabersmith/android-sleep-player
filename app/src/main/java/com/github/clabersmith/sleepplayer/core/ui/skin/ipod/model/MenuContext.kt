@@ -8,5 +8,12 @@ data class MenuContext(
     val feeds: List<PodcastFeed>,
     val categories: List<String>,
     val maxSlotsCount: Int,
-    val currentWhiteNoiseTrack: WhiteNoiseTrack? = null
+    val playbackSettings: PlaybackSettings,
+    val currentWhiteNoiseTrack: WhiteNoiseTrack? = null,
+)
+
+data class PlaybackSettings(
+    val duckVolumePercent: Int = 20,          // 0–100
+    val autoFadeMinutes: Int? = null,         // null = None
+    val autoStopMinutes: Int? = null          // null = None
 )

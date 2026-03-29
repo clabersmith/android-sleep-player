@@ -1,5 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.playback
 
+import android.util.Log
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -11,12 +13,38 @@ import kotlinx.coroutines.launch
 
 class AudioDuckingCoordinator(
     nowPlayingUiState: StateFlow<NowPlayingUiState>,
+    playbackSettings: StateFlow<PlaybackSettings>,
     private val whiteNoisePlayer: WhiteNoisePlayer,
     private val scope: CoroutineScope
 ) {
 
+    private var duckPercent: Int = 20 // default fallback
+    private var isDucked: Boolean = false
+
+    private var fadeJob: Job? = null
+
     init {
         observePodcastPlayback(nowPlayingUiState)
+        observeSettings(playbackSettings)
+    }
+
+    private fun observeSettings(
+        playbackSettings: StateFlow<PlaybackSettings>
+    ) {
+        scope.launch {
+            playbackSettings
+                .map { it.duckVolumePercent }
+                .distinctUntilChanged()
+                .collect { percent ->
+                    duckPercent = percent
+
+                    //if already ducked, update immediately
+                    if (isDucked) {
+                        val target = percentToVolume(percent)
+                        whiteNoisePlayer.setVolume(target)
+                    }
+                }
+        }
     }
 
     private fun observePodcastPlayback(
@@ -36,15 +64,17 @@ class AudioDuckingCoordinator(
         }
     }
 
-    private var fadeJob: Job? = null
-
     private fun duckWhiteNoise() {
-        fadeTo(targetVolume = 0.2f)
+        isDucked = true
+        fadeTo(targetVolume = percentToVolume(duckPercent))
     }
+
 
     private fun unduckWhiteNoise() {
+        isDucked = false
         fadeTo(targetVolume = 1.0f)
     }
+
 
     private fun fadeTo(targetVolume: Float) {
         fadeJob?.cancel()
@@ -58,12 +88,18 @@ class AudioDuckingCoordinator(
             repeat(steps) { i ->
                 val t = (i + 1) / steps.toFloat()
                 val volume = lerp(start, targetVolume, t)
+                Log.d("AudioDucking", "Fading... step ${i + 1}/$steps, volume: $volume")
                 whiteNoisePlayer.setVolume(volume)
                 delay(stepDelay)
             }
 
             whiteNoisePlayer.setVolume(targetVolume)
+            Log.d("AudioDucking", "Fade complete. Target volume: $targetVolume")
         }
+    }
+
+    private fun percentToVolume(percent: Int): Float {
+        return (percent / 100f).coerceIn(0f, 1f)
     }
 
     fun lerp(start: Float, end: Float, t: Float): Float {

@@ -3,8 +3,11 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,6 +60,20 @@ fun MenuRow(
                     else Modifier
                 )
         )
+
+        item.value?.let { value ->
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = value,
+                style = IpodMenuText,
+                fontSize = 16.sp,
+                maxLines = 1,
+                color = if (selected) Color.White else IpodTextPrimary.copy(alpha = 0.75f),
+                textAlign = TextAlign.End,
+                modifier = Modifier.widthIn(min = 48.dp)
+            )
+        }
 
         // Checkmark
         if (item.isChecked) {
