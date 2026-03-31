@@ -116,7 +116,8 @@ fun IpodScreen(
                 playClick()
             },
             onPlayPauseLongPress = {
-                viewModel.onPlayPauseLongPressed()
+                viewModel.stopPlaybackCompletely()
+                viewModel.stopWhiteNoise()
                 playClick()
             },
             onScanForwardDown = {

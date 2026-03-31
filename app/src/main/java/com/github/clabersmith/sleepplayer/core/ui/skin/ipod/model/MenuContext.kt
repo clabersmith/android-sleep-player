@@ -13,7 +13,7 @@ data class MenuContext(
 )
 
 data class PlaybackSettings(
-    val duckVolumePercent: Int = 20,          // 0–100
-    val autoFadeMinutes: Int? = null,         // null = None
-    val autoStopMinutes: Int? = null          // null = None
+    val duckVolumePercent: Int = 10,          // 0–100
+    val autoFadeMinutes: Int? = 12,         // null = None
+    val autoStopMinutes: Int? = 20          // null = None
 )

@@ -1,7 +1,5 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
-import android.util.Log
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
@@ -162,9 +160,13 @@ class MenuViewModel(
 
     private val audioDuckingCoordinator = AudioDuckingCoordinator(
         nowPlayingUiState = nowPlayingUiState,
+        player = player,
         whiteNoisePlayer = whiteNoisePlayer,
         playbackSettings = playbackSettingsFlow,
-        scope = viewModelScope
+        scope = viewModelScope,
+        stopPlaybackCompletely = {
+            stopPlaybackCompletely()
+        }
     )
 
     init {
@@ -426,11 +428,15 @@ class MenuViewModel(
         }
     }
 
-    fun onPlayPauseLongPressed() {
+    fun stopPlaybackCompletely() {
         if (_activeSlot.value != null) {
             player.stop()
             _activeSlot.value = null
         }
+    }
+
+    fun stopWhiteNoise() {
+        whiteNoisePlayer.stop()
     }
 
     // -----------------------------

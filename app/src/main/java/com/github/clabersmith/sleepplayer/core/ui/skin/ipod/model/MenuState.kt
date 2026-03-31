@@ -706,7 +706,7 @@ sealed class MenuState() {
                 }
 
                 SettingsItem.AutoFade -> {
-                    val values = (1..20).toList()
+                    val values = (0..20).toList()
                     val index = settings.autoFadeMinutes?.let { values.indexOf(it) } ?: -1
                     val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
 
