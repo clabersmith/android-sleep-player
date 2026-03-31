@@ -148,7 +148,7 @@ class MenuViewModel(
             }
             .stateIn(viewModelScope, SharingStarted.Eagerly, listOf(HomeItem.Play, HomeItem.Settings))
 
-    val playbackSettingsFlow: StateFlow<PlaybackSettings> =
+    val playbackPlaybackSettingsFlow: StateFlow<PlaybackSettings> =
         menuState
             .map { it.context.playbackSettings }
             .distinctUntilChanged()
@@ -162,7 +162,7 @@ class MenuViewModel(
         nowPlayingUiState = nowPlayingUiState,
         player = player,
         whiteNoisePlayer = whiteNoisePlayer,
-        playbackSettings = playbackSettingsFlow,
+        playbackSettings = playbackPlaybackSettingsFlow,
         scope = viewModelScope,
         stopPlaybackCompletely = {
             stopPlaybackCompletely()

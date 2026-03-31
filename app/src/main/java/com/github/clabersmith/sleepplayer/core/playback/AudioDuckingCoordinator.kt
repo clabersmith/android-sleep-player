@@ -49,7 +49,7 @@ class AudioDuckingCoordinator(
                     //if already ducked, update immediately
                     if (isDucked) {
                         val target = percentToVolume(percent)
-                        Log.d("AudioDucking", "Duck volume percent changed. Updating ducked volume to $percent% ($target)")
+                        //Log.d("AudioDucking", "Duck volume percent changed. Updating ducked volume to $percent% ($target)")
                         whiteNoisePlayer.setVolume(target)
                     }
                 }
@@ -107,13 +107,13 @@ class AudioDuckingCoordinator(
 
                 val volume = lerp(start, targetVolume, t)
 
-                Log.d("AudioDucking", "Fading... step ${i + 1}/$steps, volume: $volume")
+                //Log.d("AudioDucking", "Fading... step ${i + 1}/$steps, volume: $volume")
                 whiteNoisePlayer.setVolume(volume)
                 delay(stepDelay)
             }
 
             whiteNoisePlayer.setVolume(targetVolume)
-            Log.d("AudioDucking", "Fade complete. Target volume: $targetVolume")
+            //Log.d("AudioDucking", "Fade complete. Target volume: $targetVolume")
         }
     }
 
@@ -148,7 +148,7 @@ class AudioDuckingCoordinator(
 
                     val triggerDelayMs = autoFadeMinutes * 60_000L
 
-                    Log.d("AudioDucking", "Scheduling auto fade ONCE (delay: $triggerDelayMs ms)")
+                    //Log.d("AudioDucking", "Scheduling auto fade ONCE (delay: $triggerDelayMs ms)")
 
                     autoFadeTriggerJob = scope.launch {
                         delay(triggerDelayMs)
@@ -165,12 +165,12 @@ class AudioDuckingCoordinator(
 
     private fun startAutoFade(
         nowPlaying: NowPlayingUiState,
-        settings: PlaybackSettings
+        playbackSettings: PlaybackSettings
     ) {
         val remainingMs = nowPlaying.durationMs - nowPlaying.positionMs
         if (remainingMs <= 0) return
 
-        val fadeDurationMs = when (val stopMin = settings.autoStopMinutes) {
+        val fadeDurationMs = when (val stopMin = playbackSettings.autoStopMinutes) {
             null -> remainingMs
             else -> {
                 val stopMs = stopMin * 60_000L
@@ -185,7 +185,7 @@ class AudioDuckingCoordinator(
     }
 
     private fun startWhiteNoiseFadeUp(durationMs: Long) {
-        Log.d("AudioDucking", "Starting white noise fade UP (duration: $durationMs ms)")
+        //("AudioDucking", "Starting white noise fade UP (duration: $durationMs ms)")
         fadeTo(targetVolume = 1.0f, durationMs = durationMs, useEasing = true)
     }
 
@@ -204,7 +204,7 @@ class AudioDuckingCoordinator(
                 val easedT = easeLateHeavy(rawT)
                 val volume = lerp(startVolume, 0f, easedT)
 
-                Log.d("AudioDucking", "Fading podcast... step ${i + 1}/$steps, volume: $volume")
+                //Log.d("AudioDucking", "Fading podcast... step ${i + 1}/$steps, volume: $volume")
                 setPodcastVolume(volume)
 
                 delay(stepDelay)
@@ -249,12 +249,12 @@ class AudioDuckingCoordinator(
                     val delayMs = stopTimeMs - currentPosition
 
                     if (delayMs <= 0) {
-                        Log.d("AudioDucking", "Auto stop immediately (already past target)")
+                        //Log.d("AudioDucking", "Auto stop immediately (already past target)")
                         stopPodcast()
                         return@collect
                     }
 
-                    Log.d("AudioDucking", "Scheduling auto stop (delay: $delayMs ms)")
+                    //Log.d("AudioDucking", "Scheduling auto stop (delay: $delayMs ms)")
 
                     autoStopJob = scope.launch {
                         delay(delayMs)
@@ -271,7 +271,7 @@ class AudioDuckingCoordinator(
     }
 
     private fun stopPodcast() {
-        Log.d("AudioDucking", "Auto stop triggered. Stopping playback.")
+        //Log.d("AudioDucking", "Auto stop triggered. Stopping playback.")
         stopPlaybackCompletely()
     }
 

@@ -17,7 +17,8 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 @Composable
 fun MenuList(
     items: List<MenuItem>,
-    selectedIndex: Int
+    selectedIndex: Int,
+    modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
 
@@ -45,7 +46,7 @@ fun MenuList(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(8.dp)
     ) {

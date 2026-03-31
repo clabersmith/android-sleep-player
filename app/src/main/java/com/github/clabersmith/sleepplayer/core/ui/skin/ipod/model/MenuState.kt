@@ -635,6 +635,44 @@ sealed class MenuState() {
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
+        override val itemCount: Int = 1
+
+        override val title: String = "Settings"
+
+        override fun copyWithIndex(newIndex: Int) =
+            copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) =
+            copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+
+            handleCommonEvents(event)?.let { return it }
+
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    MenuTransition(
+                        newState = PlaybackSettings(context),
+                        direction = NavDirection.Forward
+                    )
+                }
+
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    newState = Home(context, selectedIndex = 2),
+                    direction = NavDirection.Back
+                )
+
+                else -> MenuTransition(this)
+            }
+        }
+    }
+
+    data class PlaybackSettings(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
         private val items = listOf(
             SettingsItem.DuckVolume,
             SettingsItem.AutoFade,
@@ -643,7 +681,7 @@ sealed class MenuState() {
 
         override val itemCount: Int get() = items.size
 
-        override val title: String = "Settings"
+        override val title: String = "Playback Settings"
 
         override fun copyWithIndex(newIndex: Int) =
             copy(selectedIndex = newIndex)
@@ -694,35 +732,35 @@ sealed class MenuState() {
         }
 
         private fun adjustSetting(
-            settings: PlaybackSettings,
+            playbackSettings: com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings,
             delta: Int
-        ): PlaybackSettings {
+        ): com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings {
             return when (items[selectedIndex]) {
                 SettingsItem.DuckVolume -> {
-                    val updated = (settings.duckVolumePercent + delta * 10)
+                    val updated = (playbackSettings.duckVolumePercent + delta * 10)
                         .coerceIn(0, 100)
 
-                    settings.copy(duckVolumePercent = updated)
+                    playbackSettings.copy(duckVolumePercent = updated)
                 }
 
                 SettingsItem.AutoFade -> {
                     val values = (0..20).toList()
-                    val index = settings.autoFadeMinutes?.let { values.indexOf(it) } ?: -1
+                    val index = playbackSettings.autoFadeMinutes?.let { values.indexOf(it) } ?: -1
                     val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
 
                     val updated = if (newIndex == -1) null else values[newIndex]
 
-                    settings.copy(autoFadeMinutes = updated)
+                    playbackSettings.copy(autoFadeMinutes = updated)
                 }
 
                 SettingsItem.AutoStop -> {
                     val values = listOf(5, 10, 15, 20, 25)
-                    val index = settings.autoStopMinutes?.let { values.indexOf(it) } ?: -1
+                    val index = playbackSettings.autoStopMinutes?.let { values.indexOf(it) } ?: -1
                     val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
 
                     val updated = if (newIndex == -1) null else values[newIndex]
 
-                    settings.copy(autoStopMinutes = updated)
+                    playbackSettings.copy(autoStopMinutes = updated)
                 }
             }
         }
