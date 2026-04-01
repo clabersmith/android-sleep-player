@@ -12,6 +12,10 @@ fun SettingsMenu(
         MenuItem(
             title = "Playback",
             showChevron = true
+        ),
+        MenuItem(
+            title = "Display",
+            showChevron = true
         )
     )
 

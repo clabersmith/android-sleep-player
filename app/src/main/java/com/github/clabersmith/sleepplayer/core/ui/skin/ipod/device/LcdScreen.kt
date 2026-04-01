@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.CategoryMenu
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.DisplaySettingsMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.DownloadMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.EpisodeDetailMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.EpisodeMenu
@@ -190,6 +191,6 @@ private fun RenderMenu(
         is MenuState.WhiteNoisePlay -> WhiteNoiseMenu(menuState)
         is MenuState.Settings -> SettingsMenu(menuState)
         is MenuState.PlaybackSettings -> PlaybackSettingsMenu(menuState)
-
+        is MenuState.DisplaySettings -> DisplaySettingsMenu(menuState)
     }
 }

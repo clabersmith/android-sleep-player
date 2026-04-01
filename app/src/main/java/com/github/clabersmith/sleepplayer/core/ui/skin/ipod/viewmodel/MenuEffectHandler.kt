@@ -38,7 +38,8 @@ class MenuEffectHandler(
     private val startScanForward: () -> Unit,
     private val startScanBack: () -> Unit,
     private val stopScan: () -> Unit,
-    private val updatePlaybackSettings: ( (PlaybackSettings) -> PlaybackSettings ) -> Unit
+    private val updatePlaybackSettings: ( (PlaybackSettings) -> PlaybackSettings ) -> Unit,
+    private val updateDisplayTheme: (MenuState.DisplaySettings.Theme) -> Unit
 ) {
     fun handle(effect: MenuEffect) {
         when (effect) {
@@ -110,6 +111,10 @@ class MenuEffectHandler(
 
             is MenuEffect.UpdatePlaybackSettings -> {
                 updatePlaybackSettings(effect.transform)
+            }
+
+            is MenuEffect.UpdateDisplayTheme -> {
+                updateDisplayTheme(effect.theme)
             }
         }
     }

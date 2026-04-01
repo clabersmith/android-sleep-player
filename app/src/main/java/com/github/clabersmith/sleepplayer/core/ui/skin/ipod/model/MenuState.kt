@@ -635,7 +635,7 @@ sealed class MenuState() {
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        override val itemCount: Int = 1
+        override val itemCount: Int = 2
 
         override val title: String = "Settings"
 
@@ -652,10 +652,19 @@ sealed class MenuState() {
             return when (event) {
 
                 MenuEvent.Confirm -> {
-                    MenuTransition(
-                        newState = PlaybackSettings(context),
-                        direction = NavDirection.Forward
-                    )
+                    when (selectedIndex) {
+                        0 -> MenuTransition(
+                            newState = PlaybackSettings(context),
+                            direction = NavDirection.Forward
+                        )
+
+                        1 -> MenuTransition(
+                            newState = DisplaySettings(context),
+                            direction = NavDirection.Forward
+                        )
+
+                        else -> MenuTransition(this)
+                    }
                 }
 
                 MenuEvent.MenuShortPress -> MenuTransition(
@@ -769,6 +778,67 @@ sealed class MenuState() {
             object DuckVolume : SettingsItem()
             object AutoFade : SettingsItem()
             object AutoStop : SettingsItem()
+        }
+    }
+
+    data class DisplaySettings(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
+        private val items = listOf(
+            Theme.White,
+            Theme.Black,
+            Theme.Silver,
+            Theme.Blue,
+            Theme.Green,
+            Theme.Pink
+        )
+
+        override val itemCount: Int get() = items.size
+
+        override val title: String = "Display"
+
+        override fun copyWithIndex(newIndex: Int) =
+            copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) =
+            copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+
+            handleCommonEvents(event)?.let { return it }
+
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    val selectedTheme = items[selectedIndex]
+
+                    MenuTransition(
+                        newState = this,
+                        effects = listOf(
+                            MenuEffect.UpdateDisplayTheme(selectedTheme)
+                        )
+                    )
+                }
+
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    newState = Settings(context, selectedIndex = 1),
+                    direction = NavDirection.Back
+                )
+
+                else -> MenuTransition(this)
+            }
+        }
+
+        enum class Theme {
+            White,
+            Black,
+            Silver,
+
+            Blue,
+            Green,
+            Pink
         }
     }
 }

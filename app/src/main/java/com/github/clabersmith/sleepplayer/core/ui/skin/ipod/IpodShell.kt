@@ -12,42 +12,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTheme
 
 @Composable
 fun IpodShell(
-    darkMode: Boolean,
+    theme: IpodTheme,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val baseColor = if (darkMode) Color(0xFF1E1E1E) else Color(0xFFF2F2F2)
-    val topAlpha = 0.4f
-    val bloomAlpha = 0.4f
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(baseColor)
+            .background(theme.shellGradient)
             .drawWithContent {
                 drawContent()
-                // Single-pass plastic effect
+
+                // Plastic/gloss overlay
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.14f),   // top gloss
-                            Color.Transparent,                 // mid body
-                            Color.Black.copy(alpha = 0.06f)    // bottom depth
+                            Color.White.copy(alpha = 0.14f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.06f)
                         )
                     )
                 )
             },
         contentAlignment = Alignment.Center
     ) {
-        // scale entire content to 85% of the shell
         Box(
             modifier = Modifier.fillMaxSize(0.85f),
             contentAlignment = Alignment.TopCenter
         ) {
             Column(
-                modifier = Modifier.fillMaxSize(), // now fills the scaled box
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {

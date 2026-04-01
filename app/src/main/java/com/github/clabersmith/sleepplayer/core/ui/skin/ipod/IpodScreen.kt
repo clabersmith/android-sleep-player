@@ -1,7 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod
 
 import android.media.SoundPool
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -18,30 +17,20 @@ import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.R
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.ClickWheel
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.LcdScreen
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodBodyColorDark
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodBodyColorLight
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodClickWheelTextColorDark
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodClickWheelTextColorLight
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.toIpodTheme
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.MenuViewModel
-
 
 @Composable
 fun IpodScreen(
     viewModel: MenuViewModel
 ) {
-    val darkMode = isSystemInDarkTheme()
-
-    val bodyColor =
-        if (darkMode) IpodBodyColorDark else IpodBodyColorLight
-
-    val wheelTextColor =
-        if (darkMode) IpodClickWheelTextColorDark
-        else IpodClickWheelTextColorLight
-
     val menuState by viewModel.menuState.collectAsState()
     val nowPlayingUiState by viewModel.nowPlayingUiState.collectAsState()
     val whiteNoiseUiState by viewModel.whiteNoiseUiState.collectAsState()
     val navDirection by viewModel.navDirection.collectAsState()
+
+    // ✅ NEW: resolve full theme
+    val theme = menuState.context.displaySettings.theme.toIpodTheme()
 
     val context = LocalContext.current
 
@@ -66,15 +55,15 @@ fun IpodScreen(
     fun playClick() {
         soundPool.play(
             clickSoundId,
-            .1f, // left volume
-            .1f, // right volume
-            0,  // priority
-            0,  // loop
-            1f  // playback rate
+            .1f,
+            .1f,
+            0,
+            0,
+            1f
         )
     }
 
-    IpodShell(darkMode = darkMode) {
+    IpodShell(theme = theme) {
 
         Spacer(Modifier.height(24.dp))
 
@@ -88,8 +77,9 @@ fun IpodScreen(
         Spacer(Modifier.height(36.dp))
 
         ClickWheel(
-            bodyColor = bodyColor,
-            textColor = wheelTextColor,
+            bodyColor = theme.bodyColor,
+            wheelColor = theme.clickWheelColor,
+            textColor = theme.clickWheelTextColor,
             modifier = Modifier.size(size.dp),
 
             onRotate = { delta ->
@@ -111,40 +101,39 @@ fun IpodScreen(
                 viewModel.onMenuShortPress()
                 playClick()
             },
+
             onPlayPauseShortPress = {
                 viewModel.onPlayPauseShortPressed()
                 playClick()
             },
+
             onPlayPauseLongPress = {
                 viewModel.stopPlaybackCompletely()
                 viewModel.stopWhiteNoise()
                 playClick()
             },
+
             onScanForwardDown = {
                 viewModel.onScanForwardDown()
                 playClick()
             },
+
             onScanForwardUp = {
                 viewModel.onScanForwardUp()
                 playClick()
             },
+
             onScanBackDown = {
                 viewModel.onScanBackDown()
                 playClick()
             },
+
             onScanBackUp = {
                 viewModel.onScanBackUp()
                 playClick()
             }
         )
-//        Slider(
-//            value = size,
-//            onValueChange = { size = it },
-//            valueRange = 100f..400f
-//        )
-//        Text("Size: ${size.toInt()}dp")
 
         Spacer(Modifier.height(32.dp))
     }
 }
-

@@ -228,6 +228,18 @@ class MenuViewModel(
         }
     }
 
+    private fun updateDisplayTheme(
+        theme: MenuState.DisplaySettings.Theme
+    ) {
+        updateContext { context ->
+            context.copy(
+                displaySettings = context.displaySettings.copy(
+                    theme = theme
+                )
+            )
+        }
+    }
+
     private fun goToNowPlaying(slot: SlotState, origin: MenuState.NowPlaying.Origin) {
         barMode.value = NowPlayingBarMode.TrackPosition
         _menuState.value = MenuState.NowPlaying(context, slot, origin)
@@ -247,7 +259,8 @@ class MenuViewModel(
         stopScan = { stopScan() },
         updatePlaybackSettings = { transform ->
             updatePlaybackSettings(transform)
-        }
+        },
+        updateDisplayTheme = { theme -> updateDisplayTheme(theme) }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,

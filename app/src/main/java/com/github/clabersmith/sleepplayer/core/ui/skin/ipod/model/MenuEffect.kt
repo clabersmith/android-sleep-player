@@ -46,6 +46,13 @@ sealed interface MenuEffect {
         val transform: (PlaybackSettings) -> PlaybackSettings
     ) : MenuEffect
 
+    // -----------------------------
+    // Display Theme effects
+    // -----------------------------
+    data class UpdateDisplayTheme(
+        val theme: MenuState.DisplaySettings.Theme
+    ) : MenuEffect
+
 
     // -----------------------------
     // Scan effects

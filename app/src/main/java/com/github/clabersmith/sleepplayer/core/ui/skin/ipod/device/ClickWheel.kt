@@ -32,7 +32,6 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodClickWheelColor
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -41,6 +40,7 @@ import kotlin.math.atan2
 @Composable
 fun ClickWheel(
     bodyColor: Color,
+    wheelColor: Color,
     textColor: Color,
     onRotate: (Int) -> Unit,
     onConfirm: () -> Unit,
@@ -83,7 +83,7 @@ fun ClickWheel(
                     clip = true
                 }
                 .clip(CircleShape)
-                .background(IpodClickWheelColor)
+                .background(wheelColor)
                 .border(
                     width = 1.dp,
                     color = Color.Black.copy(alpha = 0.15f),
