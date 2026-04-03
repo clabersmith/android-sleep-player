@@ -10,7 +10,8 @@ data class MenuContext(
     val maxSlotsCount: Int,
     val playbackSettings: PlaybackSettings,
     val currentWhiteNoiseTrack: WhiteNoiseTrack? = null,
-    val displaySettings: DisplaySettings = DisplaySettings()
+    val displaySettings: DisplaySettings = DisplaySettings(),
+    val audioSettings: AudioSettings = AudioSettings()
 )
 
 data class PlaybackSettings(
@@ -21,4 +22,9 @@ data class PlaybackSettings(
 
 data class DisplaySettings(
     val theme: MenuState.DisplaySettings.Theme = MenuState.DisplaySettings.Theme.White
+)
+
+data class AudioSettings(
+    val clickEnabled: Boolean = true,
+    val masterVolume: Int = 100 // 0–100
 )

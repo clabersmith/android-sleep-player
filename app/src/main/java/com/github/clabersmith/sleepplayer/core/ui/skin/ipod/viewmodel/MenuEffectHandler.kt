@@ -2,10 +2,17 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 
 /**
@@ -39,8 +46,11 @@ class MenuEffectHandler(
     private val startScanBack: () -> Unit,
     private val stopScan: () -> Unit,
     private val updatePlaybackSettings: ( (PlaybackSettings) -> PlaybackSettings ) -> Unit,
-    private val updateDisplayTheme: (MenuState.DisplaySettings.Theme) -> Unit
+    private val updateDisplayTheme: (MenuState.DisplaySettings.Theme) -> Unit,
+    private val updateAudioSettings: ( (AudioSettings) -> AudioSettings) -> Unit
 ) {
+    private var repeatJob: Job? = null
+
     fun handle(effect: MenuEffect) {
         when (effect) {
 
@@ -115,6 +125,28 @@ class MenuEffectHandler(
 
             is MenuEffect.UpdateDisplayTheme -> {
                 updateDisplayTheme(effect.theme)
+            }
+
+            is MenuEffect.UpdateAudioSettings -> {
+                updateAudioSettings(effect.transform)
+            }
+
+            is MenuEffect.StartRepeatingEffect -> {
+                repeatJob?.cancel()
+
+                repeatJob = CoroutineScope(Dispatchers.Main).launch {
+                    delay(250)
+
+                    while (isActive) {
+                        handle(effect.effect)
+                        delay(75)
+                    }
+                }
+            }
+
+            is MenuEffect.StopRepeatingEffect -> {
+                repeatJob?.cancel()
+                repeatJob = null
             }
         }
     }

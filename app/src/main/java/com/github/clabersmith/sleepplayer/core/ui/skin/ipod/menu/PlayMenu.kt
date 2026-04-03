@@ -1,7 +1,7 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu
 
 import androidx.compose.runtime.Composable
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.MenuRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 

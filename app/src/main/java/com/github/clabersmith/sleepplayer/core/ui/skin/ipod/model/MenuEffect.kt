@@ -53,6 +53,13 @@ sealed interface MenuEffect {
         val theme: MenuState.DisplaySettings.Theme
     ) : MenuEffect
 
+    // -----------------------------
+    // Audio Settings effects
+    // -----------------------------
+    data class UpdateAudioSettings(
+        val transform: (AudioSettings) -> AudioSettings
+    ) : MenuEffect
+
 
     // -----------------------------
     // Scan effects
@@ -60,5 +67,7 @@ sealed interface MenuEffect {
     object StartScanForward : MenuEffect
     object StartScanBack : MenuEffect
     object StopScan : MenuEffect
+    data class StartRepeatingEffect(val effect: MenuEffect) : MenuEffect
+    object StopRepeatingEffect : MenuEffect
 
 }

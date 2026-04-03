@@ -11,19 +11,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device.MenuRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 
 @Composable
 fun MenuList(
     items: List<MenuItem>,
     selectedIndex: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    customRow: (@Composable (Int, MenuItem, Boolean) -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
 
     LaunchedEffect(selectedIndex) {
-
         val visibleItems = listState.layoutInfo.visibleItemsInfo
         if (visibleItems.isEmpty()) return@LaunchedEffect
 
@@ -31,14 +31,9 @@ fun MenuList(
         val lastVisible = visibleItems.last().index
 
         when {
-            selectedIndex < firstVisible -> {
-                listState.scrollToItem(selectedIndex)
-            }
-
+            selectedIndex < firstVisible -> listState.scrollToItem(selectedIndex)
             selectedIndex >= lastVisible -> {
-                val targetIndex =
-                    (selectedIndex - 1).coerceAtLeast(0)
-
+                val targetIndex = (selectedIndex - 1).coerceAtLeast(0)
                 listState.scrollToItem(targetIndex)
             }
         }
@@ -52,12 +47,13 @@ fun MenuList(
     ) {
         itemsIndexed(items) { index, item ->
 
-            val isSelected = index == selectedIndex
+            val selected = index == selectedIndex
 
-            MenuRow(
-                item = item,
-                selected = isSelected
-            )
+            if (customRow != null) {
+                customRow(index, item, selected)
+            } else {
+                MenuRow(item, selected)
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
         }

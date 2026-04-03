@@ -38,16 +38,6 @@ fun NowPlayingMenu(
     state: MenuState.NowPlaying,
     nowPlayingUiState: NowPlayingUiState
 ) {
-
-    val isActiveTrack =
-        nowPlayingUiState.slot == state.slot
-
-    val position =
-        if (isActiveTrack) nowPlayingUiState.positionMs else 0L
-
-    val duration =
-        if (isActiveTrack) nowPlayingUiState.durationMs else 0L
-
     Column(
         modifier = Modifier
             .fillMaxSize()

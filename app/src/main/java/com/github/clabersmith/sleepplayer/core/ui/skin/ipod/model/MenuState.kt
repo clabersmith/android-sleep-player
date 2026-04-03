@@ -635,7 +635,7 @@ sealed class MenuState() {
         override val selectedIndex: Int = 0
     ) : MenuState() {
 
-        override val itemCount: Int = 2
+        override val itemCount: Int = 3
 
         override val title: String = "Settings"
 
@@ -660,6 +660,11 @@ sealed class MenuState() {
 
                         1 -> MenuTransition(
                             newState = DisplaySettings(context),
+                            direction = NavDirection.Forward
+                        )
+
+                        2 -> MenuTransition(
+                            newState = AudioSettings(context),
                             direction = NavDirection.Forward
                         )
 
@@ -839,6 +844,126 @@ sealed class MenuState() {
             Blue,
             Green,
             Pink
+        }
+    }
+
+    data class AudioSettings(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
+        private val items = listOf(
+            AudioItem.ClickSound,
+            AudioItem.MasterVolume
+        )
+
+        override val itemCount = items.size
+        override val title = "Audio"
+
+        override fun copyWithIndex(newIndex: Int) =
+            copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) =
+            copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+
+            when (event) {
+
+                // -----------------------------
+                // Scan Forward (press + hold)
+                // -----------------------------
+                MenuEvent.ScanForwardDown -> {
+                    return when (items[selectedIndex]) {
+                        AudioItem.MasterVolume -> MenuTransition(
+                            newState = this,
+                            effects = listOf(
+                                MenuEffect.StartRepeatingEffect(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(
+                                            masterVolume = (it.masterVolume + 1)
+                                                .coerceIn(0, 100)
+                                        )
+                                    }
+                                )
+                            )
+                        )
+                        else -> MenuTransition(this)
+                    }
+                }
+
+                // -----------------------------
+                // Scan Back (press + hold)
+                // -----------------------------
+                MenuEvent.ScanBackDown -> {
+                    return when (items[selectedIndex]) {
+                        AudioItem.MasterVolume -> MenuTransition(
+                            newState = this,
+                            effects = listOf(
+                                MenuEffect.StartRepeatingEffect(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(
+                                            masterVolume = (it.masterVolume - 1)
+                                                .coerceIn(0, 100)
+                                        )
+                                    }
+                                )
+                            )
+                        )
+                        else -> MenuTransition(this)
+                    }
+                }
+
+                // -----------------------------
+                // Stop repeating on release
+                // -----------------------------
+                MenuEvent.ScanForwardUp,
+                MenuEvent.ScanBackUp -> {
+                    return MenuTransition(
+                        newState = this,
+                        effects = listOf(MenuEffect.StopRepeatingEffect)
+                    )
+                }
+
+                // -----------------------------
+                // Confirm (click)
+                // -----------------------------
+                MenuEvent.Confirm -> {
+                    return when (items[selectedIndex]) {
+                        AudioItem.ClickSound -> MenuTransition(
+                            newState = this,
+                            effects = listOf(
+                                MenuEffect.UpdateAudioSettings {
+                                    it.copy(clickEnabled = !it.clickEnabled)
+                                }
+                            )
+                        )
+                        else -> MenuTransition(this)
+                    }
+                }
+
+                // -----------------------------
+                // Navigation
+                // -----------------------------
+                MenuEvent.MenuShortPress -> {
+                    return MenuTransition(
+                        newState = Settings(context, selectedIndex = 1),
+                        direction = NavDirection.Back
+                    )
+                }
+
+                MenuEvent.MenuLongPress ->
+                    return MenuTransition(Home(context))
+
+                else -> {}
+            }
+
+            return MenuTransition(this)
+        }
+
+        sealed class AudioItem {
+            object ClickSound : AudioItem()
+            object MasterVolume : AudioItem()
         }
     }
 }

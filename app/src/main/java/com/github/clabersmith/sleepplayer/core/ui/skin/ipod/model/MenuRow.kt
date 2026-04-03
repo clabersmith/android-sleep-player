@@ -1,4 +1,4 @@
-package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.device
+package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -20,7 +20,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.github.clabersmith.sleepplayer.R
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuHighlight
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
@@ -61,18 +60,28 @@ fun MenuRow(
                 )
         )
 
-        item.value?.let { value ->
-            Spacer(modifier = Modifier.width(8.dp))
+        if (item.volume != null) {
 
-            Text(
-                text = value,
-                style = IpodMenuText,
-                fontSize = 16.sp,
-                maxLines = 1,
-                color = if (selected) Color.White else IpodTextPrimary.copy(alpha = 0.75f),
-                textAlign = TextAlign.End,
-                modifier = Modifier.widthIn(min = 48.dp)
+            InlineVolumeBar(
+                volume = item.volume,
+                selected = selected
             )
+
+        } else if (item.value != null) {
+
+            item.value?.let { value ->
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Text(
+                    text = value,
+                    style = IpodMenuText,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    color = if (selected) Color.White else IpodTextPrimary.copy(alpha = 0.75f),
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.widthIn(min = 48.dp)
+                )
+            }
         }
 
         // Checkmark

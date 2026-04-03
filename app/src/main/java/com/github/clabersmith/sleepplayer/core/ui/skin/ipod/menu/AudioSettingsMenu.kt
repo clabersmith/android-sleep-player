@@ -5,21 +5,19 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuItem
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 
 @Composable
-fun SettingsMenu(
-    state: MenuState.Settings
+fun AudioSettingsMenu(
+    state: MenuState.AudioSettings
 ) {
+    val settings = state.context.audioSettings
+
     val items = listOf(
         MenuItem(
-            title = "Playback",
-            showChevron = true
+            title = "Click Wheel Sound",
+            isChecked = settings.clickEnabled
         ),
         MenuItem(
-            title = "Display",
-            showChevron = true
-        ),
-        MenuItem(
-            title = "Audio",
-            showChevron = true
+            title = "Master Volume",
+            volume = settings.masterVolume
         )
     )
 

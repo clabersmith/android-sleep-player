@@ -8,6 +8,7 @@ import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuContext
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
@@ -260,7 +261,8 @@ class MenuViewModel(
         updatePlaybackSettings = { transform ->
             updatePlaybackSettings(transform)
         },
-        updateDisplayTheme = { theme -> updateDisplayTheme(theme) }
+        updateDisplayTheme = { theme -> updateDisplayTheme(theme) },
+        updateAudioSettings = { transform -> updateAudioSettings(transform) }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
@@ -732,6 +734,20 @@ class MenuViewModel(
                 selectedIndex = 0
             )
         )
+    }
+
+    //----------------
+    // Update Audio Settings
+    //----------------
+    private fun updateAudioSettings(
+        transform: (AudioSettings) -> AudioSettings
+    ) {
+        context = context.copy(
+            audioSettings = transform(context.audioSettings)
+        )
+
+        val current = _menuState.value
+        _menuState.value = current.withContext(context)
     }
 
 }

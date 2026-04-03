@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.AudioSettingsMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.CategoryMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.DisplaySettingsMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.DownloadMenu
@@ -192,5 +193,6 @@ private fun RenderMenu(
         is MenuState.Settings -> SettingsMenu(menuState)
         is MenuState.PlaybackSettings -> PlaybackSettingsMenu(menuState)
         is MenuState.DisplaySettings -> DisplaySettingsMenu(menuState)
+        is MenuState.AudioSettings -> AudioSettingsMenu(menuState)
     }
 }
