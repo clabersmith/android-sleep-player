@@ -135,11 +135,26 @@ class MenuEffectHandler(
                 repeatJob?.cancel()
 
                 repeatJob = CoroutineScope(Dispatchers.Main).launch {
-                    delay(250)
+
+                    val startTime = System.currentTimeMillis()
+
+                    delay(100) // initial "hold" threshold (prevents accidental repeats)
 
                     while (isActive) {
-                        handle(effect.effect)
-                        delay(75)
+                        val elapsed = System.currentTimeMillis() - startTime
+
+                        val (stepMultiplier, delayMs) = when {
+                            elapsed < 500 -> 1 to 120L   // very short hold → slow, precise
+                            elapsed < 1500 -> 1 to 80L   // still precise, slightly faster
+                            elapsed < 3000 -> 2 to 60L   // medium hold → faster
+                            else -> 3 to 40L             // long hold → fast ramp
+                        }
+
+                        repeat(stepMultiplier) {
+                            handle(effect.effect)
+                        }
+
+                        delay(delayMs)
                     }
                 }
             }

@@ -707,25 +707,47 @@ sealed class MenuState() {
 
             // Override scan behavior (DO NOT call handleCommonEvents for scan)
             when (event) {
+
+                // -----------------------------
+                // Scan Forward (press + hold)
+                // -----------------------------
                 MenuEvent.ScanForwardDown -> {
                     return MenuTransition(
                         newState = this,
                         effects = listOf(
-                            MenuEffect.UpdatePlaybackSettings { current ->
-                                adjustSetting(current, +1)
-                            }
+                            MenuEffect.StartRepeatingEffect(
+                                MenuEffect.UpdatePlaybackSettings { current ->
+                                    adjustSetting(current, +1)
+                                }
+                            )
                         )
                     )
                 }
 
+                // -----------------------------
+                // Scan Back (press + hold)
+                // -----------------------------
                 MenuEvent.ScanBackDown -> {
                     return MenuTransition(
                         newState = this,
                         effects = listOf(
-                            MenuEffect.UpdatePlaybackSettings { current ->
-                                adjustSetting(current, -1)
-                            }
+                            MenuEffect.StartRepeatingEffect(
+                                MenuEffect.UpdatePlaybackSettings { current ->
+                                    adjustSetting(current, -1)
+                                }
+                            )
                         )
+                    )
+                }
+
+                // -----------------------------
+                // Stop repeating on release
+                // -----------------------------
+                MenuEvent.ScanForwardUp,
+                MenuEvent.ScanBackUp -> {
+                    return MenuTransition(
+                        newState = this,
+                        effects = listOf(MenuEffect.StopRepeatingEffect)
                     )
                 }
 
@@ -737,7 +759,7 @@ sealed class MenuState() {
 
             return when (event) {
                 MenuEvent.MenuShortPress -> MenuTransition(
-                    newState = Home(context, selectedIndex = 2),
+                    newState = Settings(context),
                     direction = NavDirection.Back
                 )
 
@@ -768,7 +790,7 @@ sealed class MenuState() {
                 }
 
                 SettingsItem.AutoStop -> {
-                    val values = listOf(5, 10, 15, 20, 25)
+                    val values = (0..25).toList()
                     val index = playbackSettings.autoStopMinutes?.let { values.indexOf(it) } ?: -1
                     val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
 
@@ -947,13 +969,13 @@ sealed class MenuState() {
                 // -----------------------------
                 MenuEvent.MenuShortPress -> {
                     return MenuTransition(
-                        newState = Settings(context, selectedIndex = 1),
+                        newState = Settings(context, selectedIndex = 2),
                         direction = NavDirection.Back
                     )
                 }
 
                 MenuEvent.MenuLongPress ->
-                    return MenuTransition(Home(context))
+                    return MenuTransition(Settings(context))
 
                 else -> {}
             }
