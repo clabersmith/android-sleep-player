@@ -32,7 +32,7 @@ class ExoWhiteNoisePlayer(
         get() = _snapshotFlow
 
     init {
-        exoPlayer.volume = 0.6f
+        exoPlayer.volume = 1.0f
 
         // Loop forever
         exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
@@ -71,12 +71,6 @@ class ExoWhiteNoisePlayer(
         emitSnapshot()
     }
 
-    override fun setVolume(volume: Int) {
-        val clamped = volume.coerceIn(0, 100)
-        exoPlayer.volume = clamped / 100f
-        emitSnapshot()
-    }
-
     override fun isPlaying(): Boolean {
         return exoPlayer.isPlaying
     }
@@ -96,7 +90,7 @@ class ExoWhiteNoisePlayer(
     private fun emitSnapshot() {
         val snapshot = WhiteNoiseSnapshot(
             isPlaying = exoPlayer.isPlaying,
-            volume = (exoPlayer.volume * 100).toInt(),
+            volume = exoPlayer.volume,
             currentTrack = currentTrack
         )
 

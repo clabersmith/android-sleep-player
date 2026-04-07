@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
+import com.github.clabersmith.sleepplayer.core.playback.PlaybackClock
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.DisplaySettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuContext
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEvent
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
@@ -19,10 +21,13 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSettings
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SettingsRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,10 +73,12 @@ import kotlin.math.exp
 class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val slotRepository: SlotRepository,
+    private val settingsRepository: SettingsRepository,
     private val downloader: Downloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
-    private val whiteNoisePlayer: WhiteNoisePlayer
+    private val whiteNoisePlayer: WhiteNoisePlayer,
+    private val playbackClock: PlaybackClock
 ) : ViewModel() {
 
     private var context = MenuContext(
@@ -112,6 +119,7 @@ class MenuViewModel(
                 slot = slot,
                 positionMs = snapshot.positionMs,
                 durationMs = snapshot.durationMs,
+                startedAtMs = snapshot.startedAtMs,
                 isPlaying = snapshot.isPlaying,
                 volume = snapshot.volume,
                 barMode = mode
@@ -165,6 +173,7 @@ class MenuViewModel(
         whiteNoisePlayer = whiteNoisePlayer,
         playbackSettings = playbackPlaybackSettingsFlow,
         scope = viewModelScope,
+        playbackClock = playbackClock,
         stopPlaybackCompletely = {
             stopPlaybackCompletely()
         }
@@ -181,12 +190,16 @@ class MenuViewModel(
             val feeds = podcastRepository.getFeeds()
             val categories = podcastRepository.getCategories().distinct().sorted()
             val restoredSlots = restoreSlots(feeds)
+            val restoredSettings = settingsRepository.loadSettings()
 
             updateContext {
                 it.copy(
                     feeds = feeds,
                     categories = categories,
-                    slots = restoredSlots
+                    slots = restoredSlots,
+                    playbackSettings = restoredSettings?.playbackSettings ?: PlaybackSettings(),
+                    displaySettings = restoredSettings?.displaySettings ?: DisplaySettings(),
+                    audioSettings = restoredSettings?.audioSettings ?: AudioSettings()
                 )
             }
             // Start at Home screen after loading data
@@ -217,33 +230,6 @@ class MenuViewModel(
 
         val current = _menuState.value
         _menuState.value = current.withContext(context)
-    }
-
-    private fun updatePlaybackSettings(
-        transform: (PlaybackSettings) -> PlaybackSettings
-    ) {
-        updateContext {
-            it.copy(
-                playbackSettings = transform(it.playbackSettings)
-            )
-        }
-    }
-
-    private fun updateDisplayTheme(
-        theme: MenuState.DisplaySettings.Theme
-    ) {
-        updateContext { context ->
-            context.copy(
-                displaySettings = context.displaySettings.copy(
-                    theme = theme
-                )
-            )
-        }
-    }
-
-    private fun goToNowPlaying(slot: SlotState, origin: MenuState.NowPlaying.Origin) {
-        barMode.value = NowPlayingBarMode.TrackPosition
-        _menuState.value = MenuState.NowPlaying(context, slot, origin)
     }
 
     // Effect handler that executes side effects emitted by menu state transitions
@@ -297,6 +283,77 @@ class MenuViewModel(
             delay(3000)
             barMode.value = NowPlayingBarMode.TrackPosition
         }
+    }
+
+    // -----------------------------
+    // Settings Helpers
+    // -----------------------------
+    private fun updateAudioSettings(
+        transform: (AudioSettings) -> AudioSettings
+    ) {
+        updateContext {
+            it.copy(
+                audioSettings = transform(it.audioSettings)
+            )
+        }
+
+        persistSettings()
+    }
+
+    private fun updatePlaybackSettings(
+        transform: (PlaybackSettings) -> PlaybackSettings
+    ) {
+        updateContext {
+            it.copy(
+                playbackSettings = transform(it.playbackSettings)
+            )
+        }
+
+        persistSettings()
+    }
+
+    private fun updateDisplayTheme(
+        theme: MenuState.DisplaySettings.Theme
+    ) {
+        updateContext { context ->
+            context.copy(
+                displaySettings = context.displaySettings.copy(
+                    theme = theme
+                )
+            )
+        }
+
+        persistSettings()
+    }
+
+    private fun persistSettings() {
+        viewModelScope.launch {
+            settingsRepository.saveSettings(
+                PersistedSettings(
+                    playbackSettings = context.playbackSettings,
+                    displaySettings = context.displaySettings,
+                    audioSettings = context.audioSettings
+                )
+            )
+        }
+    }
+
+    // -----------------------------
+    // Navigation Helpers
+    // -----------------------------
+    private fun nextIndex(current: Int, delta: Int, size: Int): Int {
+        if (size <= 0) return current
+        return (current + delta + size) % size
+    }
+
+    fun goDownloaded() {
+        return setState(MenuState.Download(context, selectedIndex = 0))
+    }
+
+
+    private fun goToNowPlaying(slot: SlotState, origin: MenuState.NowPlaying.Origin) {
+        barMode.value = NowPlayingBarMode.TrackPosition
+        _menuState.value = MenuState.NowPlaying(context, slot, origin)
     }
 
     // -----------------------------
@@ -604,6 +661,15 @@ class MenuViewModel(
         goDownloaded()
     }
 
+    /**
+     * Start playback for the given download slot as a true start of the podcast.
+     *
+     * This method does not toggle play/pause. Instead, when the provided slot is not
+     * currently active it:
+     *  - loads the audio from storage,
+     *  - records the absolute start time via `player.setStartedAt`,
+     *  - and begins playback.
+     */
     fun checkStartPlayback(slot: SlotState) {
         if (_activeSlot.value != slot) {
 
@@ -612,6 +678,10 @@ class MenuViewModel(
                 val path = storage.getFilePath(slot.fileName)
 
                 player.load(AudioSource(path))
+
+                val now = playbackClock.now()
+                player.setStartedAt(now)
+
                 player.play()
 
                 _activeSlot.value = slot
@@ -628,18 +698,6 @@ class MenuViewModel(
 
     fun onMenuLongPress() {
         dispatch(MenuEvent.MenuLongPress)
-    }
-
-    // -----------------------------
-    // Navigation Helpers
-    // -----------------------------
-    private fun nextIndex(current: Int, delta: Int, size: Int): Int {
-        if (size <= 0) return current
-        return (current + delta + size) % size
-    }
-
-    fun goDownloaded() {
-        return setState(MenuState.Download(context, selectedIndex = 0))
     }
 
     // -----------------------------
@@ -736,20 +794,6 @@ class MenuViewModel(
         )
     }
 
-    //----------------
-    // Update Audio Settings
-    //----------------
-    private fun updateAudioSettings(
-        transform: (AudioSettings) -> AudioSettings
-    ) {
-        context = context.copy(
-            audioSettings = transform(context.audioSettings)
-        )
-
-        val current = _menuState.value
-        _menuState.value = current.withContext(context)
-    }
-
 }
 
 sealed class DownloadResult {
@@ -762,6 +806,7 @@ data class NowPlayingUiState(
     val slot: SlotState?,
     val positionMs: Long,
     val durationMs: Long,
+    val startedAtMs: Long? = null,
     val isPlaying: Boolean,
     val volume: Int,
     val barMode: NowPlayingBarMode = NowPlayingBarMode.TrackPosition
@@ -784,7 +829,7 @@ data class NowPlayingUiState(
 
 data class WhiteNoiseUiState(
     val isPlaying: Boolean = false,
-    val volume: Int = 60,
+    val volume: Float = .6f,
     val currentTrack: WhiteNoiseTrack? = null
 )
 

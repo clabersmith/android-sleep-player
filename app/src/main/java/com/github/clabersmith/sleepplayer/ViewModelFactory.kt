@@ -15,10 +15,12 @@ class ViewModelFactory(
             return MenuViewModel(
                 podcastRepository = container.podcastRepository,
                 slotRepository = container.persistedSlotRepository,
+                settingsRepository = container.persistedSettingsRepository,
                 downloader = container.downloader,
                 storage = container.storage,
                 player = container.audioPlayer,
-                whiteNoisePlayer = container.whiteNoisePlayer) as T
+                whiteNoisePlayer = container.whiteNoisePlayer,
+                playbackClock = container.playbackClock) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

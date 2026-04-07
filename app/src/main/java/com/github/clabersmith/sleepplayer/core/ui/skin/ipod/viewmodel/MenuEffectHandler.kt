@@ -86,10 +86,6 @@ class MenuEffectHandler(
                 whiteNoisePlayer.stop()
             }
 
-            is MenuEffect.SetWhiteNoiseVolume -> {
-                whiteNoisePlayer.setVolume(effect.volume)
-            }
-
             // -----------------------------
             // Scan effects
             // -----------------------------
@@ -138,13 +134,13 @@ class MenuEffectHandler(
 
                     val startTime = System.currentTimeMillis()
 
-                    delay(100) // initial "hold" threshold (prevents accidental repeats)
+                    delay(200) // initial "hold" threshold (prevents accidental repeats)
 
                     while (isActive) {
                         val elapsed = System.currentTimeMillis() - startTime
 
                         val (stepMultiplier, delayMs) = when {
-                            elapsed < 500 -> 1 to 120L   // very short hold → slow, precise
+                            elapsed < 500 -> 1 to 140L   // very short hold → slow, precise
                             elapsed < 1500 -> 1 to 80L   // still precise, slightly faster
                             elapsed < 3000 -> 2 to 60L   // medium hold → faster
                             else -> 3 to 40L             // long hold → fast ramp

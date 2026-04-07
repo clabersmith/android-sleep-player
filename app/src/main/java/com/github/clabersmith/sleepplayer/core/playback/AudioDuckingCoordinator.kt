@@ -9,8 +9,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
+import kotlin.math.min
 
 class AudioDuckingCoordinator(
     nowPlayingUiState: StateFlow<NowPlayingUiState>,
@@ -18,6 +21,7 @@ class AudioDuckingCoordinator(
     private val player: AudioPlayer,
     private val whiteNoisePlayer: WhiteNoisePlayer,
     private val scope: CoroutineScope,
+    private val playbackClock: PlaybackClock,
     private val stopPlaybackCompletely: () -> Unit
 ) {
 
@@ -33,7 +37,7 @@ class AudioDuckingCoordinator(
         observeSettings(playbackSettings)
         observePodcastPlayback(nowPlayingUiState)
         observeAutoFade(nowPlayingUiState, playbackSettings)
-        observeAutoStop(nowPlayingUiState, playbackSettings)
+        observeAutoStop(nowPlayingUiState, playbackSettings, playbackClock)
     }
 
     private fun observeSettings(
@@ -95,7 +99,7 @@ class AudioDuckingCoordinator(
             val steps = 20
             val stepDelay = durationMs / steps
 
-            var t: Float = 0f
+            var t: Float
 
             repeat(steps) { i ->
                 if(useEasing) {
@@ -221,48 +225,39 @@ class AudioDuckingCoordinator(
 
     private fun observeAutoStop(
         nowPlayingUiState: StateFlow<NowPlayingUiState>,
-        playbackSettings: StateFlow<PlaybackSettings>
+        playbackSettings: StateFlow<PlaybackSettings>,
+        playbackClock: PlaybackClock
     ) {
         scope.launch {
             combine(
-                nowPlayingUiState.map { it.isPlaying && it.slot != null },
+                nowPlayingUiState.map { it.isPlaying to it.slot },
                 playbackSettings.map { it.autoStopMinutes }
-            ) { playingKey, autoStopMinutes ->
-                Pair(playingKey, autoStopMinutes)
+            ) { (isPlaying, slot), autoStopMinutes ->
+                Triple(isPlaying, slot, autoStopMinutes)
             }
                 .distinctUntilChanged()
-                .collect { (isPlaying, autoStopMinutes) ->
+                .collect { (isPlaying, slot, autoStopMinutes) ->
 
                     autoStopJob?.cancel()
 
                     // Not playing or no track
-                    if (!isPlaying) return@collect
+                    if (!isPlaying || slot == null) return@collect
 
                     val stopMinutes = autoStopMinutes ?: return@collect
 
-                    // ALWAYS read latest state HERE
+                    // Capture start time
                     val nowPlaying = nowPlayingUiState.value
-
+                    val startedAtMs = nowPlaying.startedAtMs ?: playbackClock.now()
                     val stopTimeMs = stopMinutes * 60_000L
-                    val currentPosition = nowPlaying.positionMs
 
-                    val delayMs = stopTimeMs - currentPosition
-
-                    if (delayMs <= 0) {
-                        //Log.d("AudioDucking", "Auto stop immediately (already past target)")
-                        stopPodcast()
-                        return@collect
-                    }
-
-                    //Log.d("AudioDucking", "Scheduling auto stop (delay: $delayMs ms)")
+                    // Create a flow that emits elapsed time
+                    val autoStopFlow = playbackClock.timeMs
+                        .map { elapsedMs -> elapsedMs - startedAtMs }
+                        .filter { it >= stopTimeMs} //add a small buffer to ensure we don't trigger early due to timing imprecision
+                        .take(1) // Only need the first emission that reaches stop time
 
                     autoStopJob = scope.launch {
-                        delay(delayMs)
-
-                        // Re-check before stopping (important edge case)
-                        val latest = nowPlayingUiState.value
-
-                        if (latest.isPlaying && latest.slot != null) {
+                        autoStopFlow.collect {
                             stopPodcast()
                         }
                     }

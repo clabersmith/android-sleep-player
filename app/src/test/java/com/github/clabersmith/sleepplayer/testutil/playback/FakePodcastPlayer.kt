@@ -21,6 +21,7 @@ class FakePodcastPlayer : AudioPlayer {
             positionMs = 0L,
             durationMs = 60_000L,
             isPlaying = false,
+            startedAtMs = null,
             volume = 60
         )
     )
@@ -32,18 +33,22 @@ class FakePodcastPlayer : AudioPlayer {
     private var duration: Long = 60_000L
     private var isPlaying: Boolean = false
 
+    private var startedAtMs: Long? = null
+
     override suspend fun load(source: AudioSource) {
         // no-op
     }
 
     override fun play() {
         playCalled = true
+        pauseCalled = false
         isPlaying = true
         emitSnapshot()
     }
 
     override fun pause() {
         pauseCalled = true
+        playCalled = false
         isPlaying = false
         emitSnapshot()
     }
@@ -54,6 +59,12 @@ class FakePodcastPlayer : AudioPlayer {
         emitSnapshot()
     }
 
+    override fun setStartedAt(startedAtMs: Long) {
+        this.startedAtMs = startedAtMs
+        emitSnapshot()
+
+    }
+
     override fun setVolume(volume: Int) {
         volumeSet = volume
     }
@@ -62,6 +73,12 @@ class FakePodcastPlayer : AudioPlayer {
         lastSeekPosition = positionMs
         currentPosition = positionMs
         emitSnapshot()
+    }
+
+    fun advanceTime(ms: Long) {
+        if (isPlaying) {
+            currentPosition += ms
+        }
     }
 
     override fun currentPosition(): Long = currentPosition
@@ -76,6 +93,7 @@ class FakePodcastPlayer : AudioPlayer {
         _snapshotFlow.value = PlayerSnapshot(
             positionMs = currentPosition,
             durationMs = duration,
+            startedAtMs = startedAtMs,
             isPlaying = isPlaying,
             volume = volumeSet
         )

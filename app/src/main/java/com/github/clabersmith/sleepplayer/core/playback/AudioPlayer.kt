@@ -11,6 +11,7 @@ interface AudioPlayer {
     fun play()
     fun pause()
     fun seekTo(positionMs: Long)
+    fun setStartedAt(startedAtMs: Long)
 
     fun currentPosition(): Long
     fun duration(): Long
@@ -26,6 +27,7 @@ interface AudioPlayer {
 data class PlayerSnapshot(
     val positionMs: Long,
     val durationMs: Long,
+    val startedAtMs: Long?,
     val isPlaying: Boolean,
     val volume: Int
 )

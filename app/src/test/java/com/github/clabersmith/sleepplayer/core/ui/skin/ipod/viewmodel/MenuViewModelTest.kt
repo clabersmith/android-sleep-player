@@ -4,6 +4,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlot
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SettingsRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
 import com.github.clabersmith.sleepplayer.testutil.MainDispatcherRule
@@ -14,13 +15,17 @@ import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderH
 import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderProgress
 import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderSuccess
 import com.github.clabersmith.sleepplayer.testutil.data.local.FakeFileStorage
+import com.github.clabersmith.sleepplayer.testutil.data.local.FakePersistedSettingsRepository
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePodcastPlayer
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.click
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownload
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownloaded
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToFeedsMenu
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToNowPlaying
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToWhiteNoise
+import com.github.clabersmith.sleepplayer.testutil.playback.FakePlaybackClock
 import com.github.clabersmith.sleepplayer.testutil.playback.FakeWhiteNoisePlayer
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -42,21 +47,26 @@ class MenuViewModelTest() {
 
     private lateinit var fakePodcastRepository : PodcastRepository
     private lateinit var fakePersistedSlotRepository : SlotRepository
+    private lateinit var fakePersistedSettingsRepository : SettingsRepository
     private lateinit var fakeDownloaderSuccess : Downloader
     private lateinit var fakeFileStorage : FakeFileStorage
     private lateinit var fakePodcastPlayer : FakePodcastPlayer
 
     private lateinit var fakeWhiteNoisePlayer: FakeWhiteNoisePlayer
 
+    private lateinit var fakePlaybackClock: FakePlaybackClock
+
     @Before
     fun setup() {
         //setup new text fixture for each test to ensure clean state
         fakePodcastRepository = FakePodcastRepository()
         fakePersistedSlotRepository = FakePersistedSlotRepository()
+        fakePersistedSettingsRepository = FakePersistedSettingsRepository()
         fakeDownloaderSuccess = FakeDownloaderSuccess()
         fakeFileStorage = FakeFileStorage()
         fakePodcastPlayer = FakePodcastPlayer()
         fakeWhiteNoisePlayer = FakeWhiteNoisePlayer()
+        fakePlaybackClock = FakePlaybackClock()
     }
 
     @Test
@@ -308,6 +318,10 @@ class MenuViewModelTest() {
         assertEquals(1, state.context.slots.size)
     }
 
+    //--------------
+    // Tests for playback controls in Now Playing menu
+    //--------------
+
     @Test
     fun `play pause toggles playback`() = runTest {
         val viewModel = createNewViewModel()
@@ -315,17 +329,21 @@ class MenuViewModelTest() {
 
         advanceUntilIdle()
 
+        //plays a podcast
         navigateToNowPlaying(viewModel)
 
         advanceUntilIdle()
 
+        //pauses the playing podcast
         viewModel.onPlayPauseShortPressed()
+        advanceUntilIdle()
+        assertTrue(fakePodcastPlayer.pauseCalled)
 
+        //resumes playback
+        viewModel.onPlayPauseShortPressed()
+        advanceUntilIdle()
         assertTrue(fakePodcastPlayer.playCalled)
 
-        viewModel.onPlayPauseShortPressed()
-
-        assertTrue(fakePodcastPlayer.pauseCalled)
     }
 
     @Test
@@ -436,16 +454,103 @@ class MenuViewModelTest() {
         assertEquals(positionDuringScan, fakePodcastPlayer.currentPosition)
     }
 
-    private suspend fun createNewViewModel(
-        downloader: Downloader = fakeDownloaderSuccess): MenuViewModel = MenuViewModel(
-            podcastRepository = fakePodcastRepository,
-            slotRepository = fakePersistedSlotRepository,
-            downloader = downloader,
-            storage = fakeFileStorage,
-            player = fakePodcastPlayer,
-            whiteNoisePlayer = fakeWhiteNoisePlayer
-        )
+    //--------------
+    // Tests for white noise playback
+    //--------------
 
+    @Test
+    fun `selecting white noise starts playback`() = runTest {
+        val viewModel = createNewViewModel()
+        advanceUntilIdle()
+
+        navigateToWhiteNoise(viewModel)
+
+        click(viewModel) // select a track
+
+        assertTrue(fakeWhiteNoisePlayer.playCalled)
+    }
+
+    @Test
+    fun `starting podcast ducks white noise`() = runTest {
+        val viewModel = createNewViewModel()
+        persistFakeSlot()
+
+        advanceUntilIdle()
+
+        // Start white noise first
+        navigateToWhiteNoise(viewModel)
+        click(viewModel)
+
+        //hold menu down to go back to home
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        //Then play podcast
+        navigateToNowPlaying(viewModel)
+        advanceUntilIdle()
+
+        //when podcast starts, white noise should duck (volume reduced)
+        assertTrue(
+            fakeWhiteNoisePlayer.setVolumeCalled &&
+                    fakeWhiteNoisePlayer.volumeSet > -1.0f &&
+                    fakeWhiteNoisePlayer.volumeSet < 1.0f
+        )
+    }
+
+    @Test
+    fun `pausing podcast restores white noise volume`() = runTest {
+        val viewModel = createNewViewModel()
+        persistFakeSlot()
+
+        advanceUntilIdle()
+
+        //start white noise
+        navigateToWhiteNoise(viewModel)
+        click(viewModel)
+
+        //hold menu down to go back to home
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        //start a podcast
+        navigateToNowPlaying(viewModel)
+        advanceUntilIdle()
+
+        viewModel.onPlayPauseShortPressed() // pause
+        advanceUntilIdle()
+
+        assertTrue(fakeWhiteNoisePlayer.setVolumeCalled  &&
+                fakeWhiteNoisePlayer.volumeSet == 1.0f) // White noise should be unducked (volume restored) when podcast is paused
+    }
+
+    @Test
+    fun `auto stop stops playback after configured time`() = runTest {
+        val viewModel = createNewViewModel()
+
+        persistFakeSlot()
+        advanceUntilIdle()
+
+        navigateToNowPlaying(viewModel)
+        advanceUntilIdle()
+
+        fakePlaybackClock.advance(60_000) // instant, deterministic
+        advanceUntilIdle()
+
+        assertTrue(fakePodcastPlayer.stopCalled)
+    }
+
+    private suspend fun createNewViewModel(
+        downloader: Downloader = fakeDownloaderSuccess
+    ): MenuViewModel = MenuViewModel(
+        podcastRepository = fakePodcastRepository,
+        slotRepository = fakePersistedSlotRepository,
+        settingsRepository = fakePersistedSettingsRepository,
+        downloader = downloader,
+        storage = fakeFileStorage,
+        player = fakePodcastPlayer,
+        whiteNoisePlayer = fakeWhiteNoisePlayer,
+        playbackClock = fakePlaybackClock
+    )
     private suspend fun persistFakeSlot() {
         fakePersistedSlotRepository.saveSlots(
             listOf(

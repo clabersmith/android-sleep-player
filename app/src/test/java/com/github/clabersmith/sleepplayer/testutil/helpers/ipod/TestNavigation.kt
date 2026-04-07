@@ -70,6 +70,17 @@ fun TestScope.navigateToNowPlaying(
     click(viewModel)
 }
 
+fun TestScope.navigateToWhiteNoise(
+    viewModel: MenuViewModel
+) {
+    //Home, select White Noise
+    viewModel.moveSelection(1)
+
+    //Home -> White Noise
+    click(viewModel)
+}
+
+
 @OptIn(ExperimentalCoroutinesApi::class)
 fun TestScope.click(viewModel: MenuViewModel) {
     viewModel.confirmSelection()

@@ -10,8 +10,6 @@ interface WhiteNoisePlayer {
     fun play(track: WhiteNoiseTrack)
     fun stop()
 
-    fun setVolume(volume: Int)
-
     fun isPlaying(): Boolean
 
     fun release()
@@ -27,6 +25,6 @@ data class WhiteNoiseTrack(
 
 data class WhiteNoiseSnapshot(
     val isPlaying: Boolean = false,
-    val volume: Int = 60,
+    val volume: Float = .6f,
     val currentTrack: WhiteNoiseTrack? = null
 )

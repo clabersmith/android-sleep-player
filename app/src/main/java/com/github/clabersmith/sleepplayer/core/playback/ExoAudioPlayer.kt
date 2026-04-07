@@ -26,6 +26,8 @@ class ExoAudioPlayer(
     private val scope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    private var startedAtMs: Long? = null
+
     // -----------------
     // supports update of player snapshots for UI display
     // ------------------
@@ -34,6 +36,7 @@ class ExoAudioPlayer(
             PlayerSnapshot(
                 positionMs = 0L,
                 durationMs = 0L,
+                startedAtMs = startedAtMs,
                 isPlaying = false,
                 volume = 60
             )
@@ -82,6 +85,7 @@ class ExoAudioPlayer(
             positionMs = exoPlayer.currentPosition,
             durationMs = exoPlayer.duration,
             isPlaying = exoPlayer.isPlaying,
+            startedAtMs = startedAtMs,
             volume = exoPlayer.volume.times(100).toInt()
         )
     }
@@ -109,6 +113,12 @@ class ExoAudioPlayer(
 
     override fun stop() {
         exoPlayer.stop()
+    }
+
+    override fun setStartedAt(startedAtMs: Long) {
+        this.startedAtMs = startedAtMs
+        emitSnapshot()
+
     }
 
     override fun setVolume(volume: Int) {

@@ -10,9 +10,10 @@ class FakeWhiteNoisePlayer : WhiteNoisePlayer {
 
     var playCalled = false
     var stopCalled = false
+    var setVolumeCalled = false
 
     var lastPlayedTrack: WhiteNoiseTrack? = null
-    var volumeSet: Int = 60
+    var volumeSet: Float = -1.0f //initially 0 for testing purposes
 
     private val _snapshotFlow = MutableStateFlow(
         WhiteNoiseSnapshot(
@@ -47,15 +48,19 @@ class FakeWhiteNoisePlayer : WhiteNoisePlayer {
         emitSnapshot()
     }
 
-    override fun setVolume(volume: Int) {
-        volumeSet = volume
-        emitSnapshot()
-    }
-
     override fun isPlaying(): Boolean = isPlaying
 
     override fun release() {
         // no-op
+    }
+
+    override fun setVolume(volume: Float) {
+        setVolumeCalled = true
+        volumeSet = volume
+    }
+
+    override fun getVolume(): Float {
+        return volumeSet
     }
 
     private fun emitSnapshot() {
