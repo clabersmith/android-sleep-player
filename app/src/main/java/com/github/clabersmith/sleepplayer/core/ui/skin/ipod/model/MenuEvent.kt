@@ -24,4 +24,7 @@ sealed interface MenuEvent {
     data object ScanBackDown : MenuEvent
     data object ScanBackUp : MenuEvent
 
+    //Audio player updates
+    object PlaybackStopped : MenuEvent
+
 }

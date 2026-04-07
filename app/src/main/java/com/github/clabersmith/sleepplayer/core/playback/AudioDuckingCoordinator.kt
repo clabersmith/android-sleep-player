@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
-import kotlin.math.min
 
 class AudioDuckingCoordinator(
     nowPlayingUiState: StateFlow<NowPlayingUiState>,
@@ -253,7 +252,7 @@ class AudioDuckingCoordinator(
                     // Create a flow that emits elapsed time
                     val autoStopFlow = playbackClock.timeMs
                         .map { elapsedMs -> elapsedMs - startedAtMs }
-                        .filter { it >= stopTimeMs} //add a small buffer to ensure we don't trigger early due to timing imprecision
+                        .filter { it >= stopTimeMs + 1000L} //add a small buffer to ensure we don't trigger early due to timing imprecision
                         .take(1) // Only need the first emission that reaches stop time
 
                     autoStopJob = scope.launch {

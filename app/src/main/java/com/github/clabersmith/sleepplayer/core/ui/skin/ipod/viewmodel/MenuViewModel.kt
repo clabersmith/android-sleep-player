@@ -1,5 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
@@ -504,6 +505,13 @@ class MenuViewModel(
         if (_activeSlot.value != null) {
             player.stop()
             _activeSlot.value = null
+        }
+
+        Log.d("MenuViewModel", "_menuState.value: ${_menuState.value}")
+
+        // Only dispatch if we are on NowPlaying
+        if (_menuState.value is MenuState.NowPlaying) {
+            dispatch(MenuEvent.PlaybackStopped)
         }
     }
 

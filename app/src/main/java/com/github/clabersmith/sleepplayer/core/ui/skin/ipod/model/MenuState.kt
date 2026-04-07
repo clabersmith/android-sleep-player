@@ -557,7 +557,9 @@ sealed class MenuState() {
                         else -> MenuTransition(this)
                     }
 
-                    else -> MenuTransition(this)
+                MenuEvent.PlaybackStopped -> MenuTransition(Home(context)) // redirect to Home
+
+                else -> MenuTransition(this)
             }
         }
 
