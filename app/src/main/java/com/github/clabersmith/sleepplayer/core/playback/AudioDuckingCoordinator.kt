@@ -35,7 +35,7 @@ class AudioDuckingCoordinator(
     init {
         observeSettings(playbackSettings)
         observePodcastPlayback(nowPlayingUiState)
-        observeAutoFade(nowPlayingUiState, playbackSettings)
+        observeAutoFade(nowPlayingUiState, playbackSettings, playbackClock)
         observeAutoStop(nowPlayingUiState, playbackSettings, playbackClock)
     }
 
@@ -110,7 +110,7 @@ class AudioDuckingCoordinator(
 
                 val volume = lerp(start, targetVolume, t)
 
-                //Log.d("AudioDucking", "Fading... step ${i + 1}/$steps, volume: $volume")
+                //Log.d("AudioDucking", "Fading white noise... step ${i + 1}/$steps, volume: $volume")
                 whiteNoisePlayer.setVolume(volume)
                 delay(stepDelay)
             }
@@ -132,7 +132,8 @@ class AudioDuckingCoordinator(
 
     private fun observeAutoFade(
         nowPlayingUiState: StateFlow<NowPlayingUiState>,
-        playbackSettings: StateFlow<PlaybackSettings>
+        playbackSettings: StateFlow<PlaybackSettings>,
+        playbackClock: PlaybackClock
     ) {
         scope.launch {
             combine(
@@ -149,18 +150,21 @@ class AudioDuckingCoordinator(
 
                     if (!isPlaying || autoFadeMinutes == null) return@collect
 
-                    val triggerDelayMs = autoFadeMinutes * 60_000L
-
-                    //Log.d("AudioDucking", "Scheduling auto fade ONCE (delay: $triggerDelayMs ms)")
+                    val nowPlaying = nowPlayingUiState.value
+                    val startedAtMs = nowPlaying.startedAtMs ?: playbackClock.now()
+                    val triggerTimeMs = autoFadeMinutes * 60_000L
 
                     autoFadeTriggerJob = scope.launch {
-                        delay(triggerDelayMs)
+                        playbackClock.timeMs
+                            .map { it - startedAtMs } // elapsed
+                            .filter { it >= triggerTimeMs }
+                            .take(1)
+                            .collect {
+                                val latestNowPlaying = nowPlayingUiState.value
+                                val latestSettings = playbackSettings.value
 
-                        // Pull LATEST values at execution time
-                        val nowPlaying = nowPlayingUiState.value
-                        val settings = playbackSettings.value
-
-                        startAutoFade(nowPlaying, settings)
+                                startAutoFade(latestNowPlaying, latestSettings)
+                            }
                     }
                 }
         }
@@ -188,7 +192,7 @@ class AudioDuckingCoordinator(
     }
 
     private fun startWhiteNoiseFadeUp(durationMs: Long) {
-        //("AudioDucking", "Starting white noise fade UP (duration: $durationMs ms)")
+        //Log.d("AudioDucking", "Starting white noise fade UP (duration: $durationMs ms)")
         fadeTo(targetVolume = 1.0f, durationMs = durationMs, useEasing = true)
     }
 

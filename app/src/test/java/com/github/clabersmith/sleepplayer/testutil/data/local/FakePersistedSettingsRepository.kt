@@ -22,7 +22,7 @@ class FakePersistedSettingsRepository: SettingsRepository {
     }
 
     private fun init() = PersistedSettings(
-        playbackSettings = PlaybackSettings(autoStopMinutes = 1), // set auto-stop to 1 minute for testing purposes
+        playbackSettings = PlaybackSettings(),
         displaySettings =  DisplaySettings(),
         audioSettings =  AudioSettings()
     )

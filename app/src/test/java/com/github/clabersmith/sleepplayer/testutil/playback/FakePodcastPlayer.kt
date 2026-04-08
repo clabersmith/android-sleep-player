@@ -12,6 +12,7 @@ class FakePodcastPlayer : AudioPlayer {
     var playCalled = false
     var pauseCalled = false
     var stopCalled = false
+    var setVolumeCalled = false
     var lastSeekPosition: Long = 0L
 
     var volumeSet: Int = 0
@@ -66,6 +67,7 @@ class FakePodcastPlayer : AudioPlayer {
     }
 
     override fun setVolume(volume: Int) {
+        setVolumeCalled = true
         volumeSet = volume
     }
 

@@ -507,7 +507,7 @@ class MenuViewModel(
             _activeSlot.value = null
         }
 
-        Log.d("MenuViewModel", "_menuState.value: ${_menuState.value}")
+        //Log.d("MenuViewModel", "_menuState.value: ${_menuState.value}")
 
         // Only dispatch if we are on NowPlaying
         if (_menuState.value is MenuState.NowPlaying) {

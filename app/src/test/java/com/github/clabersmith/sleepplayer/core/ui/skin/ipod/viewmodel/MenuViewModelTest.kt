@@ -1,8 +1,12 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.DisplaySettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSettings
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlot
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SettingsRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
@@ -18,15 +22,17 @@ import com.github.clabersmith.sleepplayer.testutil.data.local.FakeFileStorage
 import com.github.clabersmith.sleepplayer.testutil.data.local.FakePersistedSettingsRepository
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePodcastPlayer
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.click
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToAudioSettings
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToDisplaySettings
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownload
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownloaded
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToFeedsMenu
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToNowPlaying
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToPlaybackSettings
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToSettings
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToWhiteNoise
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePlaybackClock
 import com.github.clabersmith.sleepplayer.testutil.playback.FakeWhiteNoisePlayer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -34,6 +40,7 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -455,6 +462,90 @@ class MenuViewModelTest() {
     }
 
     //--------------
+    // Tests for settings
+    //--------------
+
+    @Test
+    fun `changing settings persists them`() = runTest {
+        val viewModel = createNewViewModel()
+
+        advanceUntilIdle()
+
+        navigateToDisplaySettings(viewModel)
+
+        //move selection to Green Theme and select
+
+        viewModel.moveSelection(4)
+        viewModel.confirmSelection()
+
+        advanceUntilIdle()
+
+        assertEquals(MenuState.DisplaySettings.Theme.Green,
+            fakePersistedSettingsRepository.loadSettings()?.displaySettings?.theme)
+    }
+
+    @Test
+    fun `loads persisted settings on init`() = runTest {
+        fakePersistedSettingsRepository.saveSettings(
+            PersistedSettings(
+                playbackSettings = PlaybackSettings(autoStopMinutes = 5),
+                displaySettings = DisplaySettings(theme = MenuState.DisplaySettings.Theme.Black),
+                audioSettings = AudioSettings(clickEnabled = false, masterVolume = 30)
+            )
+        )
+
+        val viewModel = createNewViewModel()
+        advanceUntilIdle()
+
+        assertEquals(5,
+            viewModel.menuState.value.context.playbackSettings.autoStopMinutes)
+        assertEquals(MenuState.DisplaySettings.Theme.Black,
+            viewModel.menuState.value.context.displaySettings.theme)
+        assertEquals(30,
+            viewModel.menuState.value.context.audioSettings.masterVolume)
+    }
+
+    @Test
+    fun `changing theme updates display settings`() = runTest {
+        val viewModel = createNewViewModel()
+        advanceUntilIdle()
+
+        navigateToDisplaySettings(viewModel)
+
+        //move selection to Silver Theme and select
+        viewModel.moveSelection(2)
+        viewModel.confirmSelection()
+
+        assertEquals(MenuState.DisplaySettings.Theme.Silver,
+            viewModel.menuState.value.context.displaySettings.theme)
+    }
+
+    @Test
+    fun `toggle click sound updates setting`() = runTest {
+        // Set initial settings with click enabled
+        fakePersistedSettingsRepository.saveSettings(
+            PersistedSettings(
+                playbackSettings = PlaybackSettings(),
+                displaySettings = DisplaySettings(),
+                audioSettings = AudioSettings(clickEnabled = true)
+            )
+        )
+
+        val viewModel = createNewViewModel()
+
+        advanceUntilIdle()
+
+        navigateToAudioSettings(viewModel)
+
+        // Toggle click sound off
+        viewModel.confirmSelection()
+
+        assertFalse(viewModel.menuState.value.context.audioSettings.clickEnabled)
+
+    }
+
+
+    //--------------
     // Tests for white noise playback
     //--------------
 
@@ -528,15 +619,90 @@ class MenuViewModelTest() {
         val viewModel = createNewViewModel()
 
         persistFakeSlot()
+
+        fakePersistedSettingsRepository.saveSettings(
+            PersistedSettings(
+                playbackSettings = PlaybackSettings(autoStopMinutes = 1),
+                displaySettings = DisplaySettings(),
+                audioSettings = AudioSettings()
+            )
+        )
+
+
         advanceUntilIdle()
 
         navigateToNowPlaying(viewModel)
         advanceUntilIdle()
 
-        fakePlaybackClock.advance(60_000) // instant, deterministic
+        fakePlaybackClock.advance(60_000 + 1_000) // instant, deterministic,
+            // matches setting in fakePersistedSettingsRepository, includes slight buffer to ensure we pass the threshold
         advanceUntilIdle()
 
         assertTrue(fakePodcastPlayer.stopCalled)
+    }
+
+    @Test
+    fun `auto fade triggers after configured time`() = runTest {
+        val viewModel = createNewViewModel()
+
+        // Arrange: persisted slot so playback works
+        persistFakeSlot()
+
+        // Set auto fade to 1 minute
+        fakePersistedSettingsRepository.saveSettings(
+            PersistedSettings(
+                playbackSettings = PlaybackSettings(autoFadeMinutes = 1),
+                displaySettings = DisplaySettings(),
+                audioSettings = AudioSettings()
+            )
+        )
+
+        advanceUntilIdle()
+
+        // Start playback (this sets startedAtMs)
+        navigateToNowPlaying(viewModel)
+        advanceUntilIdle()
+
+        // advance clock to trigger auto-fade
+        fakePlaybackClock.advance(60_000)
+        advanceUntilIdle()
+
+        // test podcast fade started (volume changed)
+        assertTrue(fakePodcastPlayer.setVolumeCalled &&
+                fakePodcastPlayer.volumeSet < 100)
+    }
+
+    @Test
+    fun `auto fade does not trigger if playback stops before timer`() = runTest {
+        val viewModel = createNewViewModel()
+
+        persistFakeSlot()
+
+        // Set auto fade to 1 minute
+        fakePersistedSettingsRepository.saveSettings(
+            PersistedSettings(
+                playbackSettings = PlaybackSettings(autoFadeMinutes = 1),
+                displaySettings = DisplaySettings(),
+                audioSettings = AudioSettings()
+            )
+        )
+
+        advanceUntilIdle()
+
+        // Start playback
+        navigateToNowPlaying(viewModel)
+        advanceUntilIdle()
+
+        // Stop playback early (before 1 minute)
+        viewModel.stopPlaybackCompletely()
+        advanceUntilIdle()
+
+        // Advance time past the original trigger
+        fakePlaybackClock.advance(60_000)
+        advanceUntilIdle()
+
+        // Assert: no fade occurred
+        assertFalse(fakePodcastPlayer.setVolumeCalled)
     }
 
     private suspend fun createNewViewModel(

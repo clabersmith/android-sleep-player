@@ -80,6 +80,43 @@ fun TestScope.navigateToWhiteNoise(
     click(viewModel)
 }
 
+fun TestScope.navigateToSettings(
+    viewModel: MenuViewModel
+) {
+    //Home, select Settings
+    viewModel.moveSelection(2)
+
+    //Home -> Settings
+    click(viewModel)
+}
+
+fun TestScope.navigateToDisplaySettings(
+    viewModel: MenuViewModel
+) {
+
+    navigateToSettings(viewModel)
+
+    //Settings, select Display
+    viewModel.moveSelection(1)
+
+    //Settings -> Playback
+    click(viewModel)
+}
+
+fun TestScope.navigateToAudioSettings(
+    viewModel: MenuViewModel
+) {
+
+    navigateToSettings(viewModel)
+
+    //Settings, select Audio
+    viewModel.moveSelection(2)
+
+    //Settings -> Audio
+    click(viewModel)
+}
+
+
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun TestScope.click(viewModel: MenuViewModel) {

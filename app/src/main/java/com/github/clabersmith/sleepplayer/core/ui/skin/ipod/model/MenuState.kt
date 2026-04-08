@@ -864,7 +864,6 @@ sealed class MenuState() {
             White,
             Black,
             Silver,
-
             Blue,
             Green,
             Pink
