@@ -16,8 +16,12 @@ fun AudioSettingsMenu(
             isChecked = settings.clickEnabled
         ),
         MenuItem(
-            title = "Master Volume",
-            volume = settings.masterVolume
+            title = "Podcast Volume",
+            volume = settings.defaultPodcastVolume
+        ),
+        MenuItem(
+            title = "Noise Volume",
+            volume = settings.defaultWhiteNoiseVolume
         )
     )
 

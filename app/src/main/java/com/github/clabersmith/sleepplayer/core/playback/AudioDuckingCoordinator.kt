@@ -21,6 +21,8 @@ class AudioDuckingCoordinator(
     private val whiteNoisePlayer: WhiteNoisePlayer,
     private val scope: CoroutineScope,
     private val playbackClock: PlaybackClock,
+    private val getPodcastBaseVolume: () -> Int,
+    private val getWhiteNoiseBaseVolume: () -> Int,
     private val stopPlaybackCompletely: () -> Unit
 ) {
 
@@ -51,8 +53,7 @@ class AudioDuckingCoordinator(
 
                     //if already ducked, update immediately
                     if (isDucked) {
-                        val target = percentToVolume(percent)
-                        //Log.d("AudioDucking", "Duck volume percent changed. Updating ducked volume to $percent% ($target)")
+                        val target = Volume.percentToFloat(percent)
                         whiteNoisePlayer.setVolume(target)
                     }
                 }
@@ -80,15 +81,15 @@ class AudioDuckingCoordinator(
 
     private fun duckWhiteNoise() {
         isDucked = true
-        fadeTo(targetVolume = percentToVolume(duckPercent))
+        fadeTo(targetVolume = Volume.percentToFloat(duckPercent))
     }
-
 
     private fun unduckWhiteNoise() {
         isDucked = false
-        fadeTo(targetVolume = 1.0f)
-    }
 
+        val base = Volume.percentToFloat(getWhiteNoiseBaseVolume())
+        fadeTo(targetVolume = base)
+    }
 
     private fun fadeTo(targetVolume: Float, durationMs: Long = 15000L, useEasing: Boolean = false) {
         fadeJob?.cancel()
@@ -120,10 +121,6 @@ class AudioDuckingCoordinator(
         }
     }
 
-    private fun percentToVolume(percent: Int): Float {
-        return (percent / 100f).coerceIn(0f, 1f)
-    }
-
     fun lerp(start: Float, end: Float, t: Float): Float {
         return start + (end - start) * t
     }
@@ -145,10 +142,15 @@ class AudioDuckingCoordinator(
                 .distinctUntilChanged()
                 .collect { (isPlaying, autoFadeMinutes) ->
 
+                    // ALWAYS cancel existing jobs first
                     autoFadeTriggerJob?.cancel()
                     podcastFadeJob?.cancel()
 
-                    if (!isPlaying || autoFadeMinutes == null) return@collect
+
+                    if (!isPlaying || autoFadeMinutes == null) {
+                        autoFadeTriggerJob = null
+                        return@collect
+                    }
 
                     val nowPlaying = nowPlayingUiState.value
                     val startedAtMs = nowPlaying.startedAtMs ?: playbackClock.now()
@@ -161,8 +163,11 @@ class AudioDuckingCoordinator(
                             .take(1)
                             .collect {
                                 val latestNowPlaying = nowPlayingUiState.value
-                                val latestSettings = playbackSettings.value
+                                if (!latestNowPlaying.isPlaying || latestNowPlaying.slot == null) {
+                                    return@collect
+                                }
 
+                                val latestSettings = playbackSettings.value
                                 startAutoFade(latestNowPlaying, latestSettings)
                             }
                     }
@@ -193,8 +198,10 @@ class AudioDuckingCoordinator(
 
     private fun startWhiteNoiseFadeUp(durationMs: Long) {
         //Log.d("AudioDucking", "Starting white noise fade UP (duration: $durationMs ms)")
+        val base = Volume.percentToFloat(getWhiteNoiseBaseVolume())
         fadeTo(targetVolume = 1.0f, durationMs = durationMs, useEasing = true)
     }
+
 
     private fun startPodcastFadeDown(durationMs: Long) {
         podcastFadeJob?.cancel()
@@ -202,9 +209,15 @@ class AudioDuckingCoordinator(
         podcastFadeJob = scope.launch {
 
             val steps = 40
-            val stepDelay = (durationMs / steps).coerceAtLeast(50L)
+            val startVolume = player.getVolume()
 
-            val startVolume = 1.0f
+            // scale duration based on remaining volume
+            val baseVolume = Volume.percentToFloat(getPodcastBaseVolume())
+            val remainingFraction =
+                if (baseVolume > 0f) startVolume / baseVolume else 0f
+
+            val adjustedDuration = (durationMs * remainingFraction).toLong()
+            val stepDelay = (adjustedDuration / steps).coerceAtLeast(50L)
 
             repeat(steps) { i ->
                 val rawT = (i + 1) / steps.toFloat()
@@ -221,9 +234,13 @@ class AudioDuckingCoordinator(
         }
     }
 
-    private fun setPodcastVolume(volume: Float) {
-        val scaled = (volume * 100).toInt().coerceIn(0, 100)
-        player.setVolume(scaled)
+    private fun setPodcastVolume(multiplier: Float) {
+        val base = Volume.percentToFloat(getPodcastBaseVolume())
+
+        val final = (base * multiplier)
+            .coerceIn(0f, 1f)
+
+        player.setVolume(final)
     }
 
     private fun observeAutoStop(
@@ -277,5 +294,4 @@ class AudioDuckingCoordinator(
         // cubic ease-in (slow → fast)
         return t * t * t
     }
-
 }

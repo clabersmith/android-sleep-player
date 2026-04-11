@@ -717,6 +717,12 @@ sealed class MenuState() {
                     return MenuTransition(
                         newState = this,
                         effects = listOf(
+                            // Immediate single step (tap)
+                            MenuEffect.UpdatePlaybackSettings { current ->
+                                adjustSetting(current, +1)
+                            },
+
+                            // Hold for continuous adjustment
                             MenuEffect.StartRepeatingEffect(
                                 MenuEffect.UpdatePlaybackSettings { current ->
                                     adjustSetting(current, +1)
@@ -733,6 +739,11 @@ sealed class MenuState() {
                     return MenuTransition(
                         newState = this,
                         effects = listOf(
+                            // Immediate single step (tap)
+                            MenuEffect.UpdatePlaybackSettings { current ->
+                                adjustSetting(current, -1)
+                            },
+
                             MenuEffect.StartRepeatingEffect(
                                 MenuEffect.UpdatePlaybackSettings { current ->
                                     adjustSetting(current, -1)
@@ -782,7 +793,7 @@ sealed class MenuState() {
                 }
 
                 SettingsItem.AutoFade -> {
-                    val values = (0..20).toList()
+                    val values = (1..20).toList()
                     val index = playbackSettings.autoFadeMinutes?.let { values.indexOf(it) } ?: -1
                     val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
 
@@ -792,7 +803,7 @@ sealed class MenuState() {
                 }
 
                 SettingsItem.AutoStop -> {
-                    val values = (0..25).toList()
+                    val values = (1..25).toList()
                     val index = playbackSettings.autoStopMinutes?.let { values.indexOf(it) } ?: -1
                     val newIndex = (index + delta).coerceIn(-1, values.lastIndex)
 
@@ -877,7 +888,8 @@ sealed class MenuState() {
 
         private val items = listOf(
             AudioItem.ClickSound,
-            AudioItem.MasterVolume
+            AudioItem.PodcastVolume,
+            AudioItem.WhiteNoiseVolume,
         )
 
         override val itemCount = items.size
@@ -898,19 +910,43 @@ sealed class MenuState() {
                 // -----------------------------
                 MenuEvent.ScanForwardDown -> {
                     return when (items[selectedIndex]) {
-                        AudioItem.MasterVolume -> MenuTransition(
+
+                        AudioItem.PodcastVolume -> MenuTransition(
                             newState = this,
                             effects = listOf(
+                                MenuEffect.UpdateAudioSettings {
+                                    it.copy(
+                                        defaultPodcastVolume = adjust(it.defaultPodcastVolume, +1)
+                                    )
+                                },
                                 MenuEffect.StartRepeatingEffect(
                                     MenuEffect.UpdateAudioSettings {
                                         it.copy(
-                                            masterVolume = (it.masterVolume + 1)
-                                                .coerceIn(0, 100)
+                                            defaultPodcastVolume = adjust(it.defaultPodcastVolume, +1)
                                         )
                                     }
                                 )
                             )
                         )
+
+                        AudioItem.WhiteNoiseVolume -> MenuTransition(
+                            newState = this,
+                            effects = listOf(
+                                MenuEffect.UpdateAudioSettings {
+                                    it.copy(
+                                        defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, +1)
+                                    )
+                                },
+                                MenuEffect.StartRepeatingEffect(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(
+                                            defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, +1)
+                                        )
+                                    }
+                                )
+                            )
+                        )
+
                         else -> MenuTransition(this)
                     }
                 }
@@ -920,19 +956,43 @@ sealed class MenuState() {
                 // -----------------------------
                 MenuEvent.ScanBackDown -> {
                     return when (items[selectedIndex]) {
-                        AudioItem.MasterVolume -> MenuTransition(
+
+                        AudioItem.PodcastVolume -> MenuTransition(
                             newState = this,
                             effects = listOf(
+                                MenuEffect.UpdateAudioSettings {
+                                    it.copy(
+                                        defaultPodcastVolume = adjust(it.defaultPodcastVolume, -1)
+                                    )
+                                },
                                 MenuEffect.StartRepeatingEffect(
                                     MenuEffect.UpdateAudioSettings {
                                         it.copy(
-                                            masterVolume = (it.masterVolume - 1)
-                                                .coerceIn(0, 100)
+                                            defaultPodcastVolume = adjust(it.defaultPodcastVolume, -1)
                                         )
                                     }
                                 )
                             )
                         )
+
+                        AudioItem.WhiteNoiseVolume -> MenuTransition(
+                            newState = this,
+                            effects = listOf(
+                                MenuEffect.UpdateAudioSettings {
+                                    it.copy(
+                                        defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, -1)
+                                    )
+                                },
+                                MenuEffect.StartRepeatingEffect(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(
+                                            defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, -1)
+                                        )
+                                    }
+                                )
+                            )
+                        )
+
                         else -> MenuTransition(this)
                     }
                 }
@@ -986,7 +1046,13 @@ sealed class MenuState() {
 
         sealed class AudioItem {
             object ClickSound : AudioItem()
-            object MasterVolume : AudioItem()
+            object PodcastVolume : AudioItem()
+            object WhiteNoiseVolume : AudioItem()
         }
+
+        private fun adjust(
+            value: Int,
+            delta: Int
+        ) = (value + delta).coerceIn(0, 100)
     }
 }

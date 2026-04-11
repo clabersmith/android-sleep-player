@@ -32,8 +32,6 @@ class ExoWhiteNoisePlayer(
         get() = _snapshotFlow
 
     init {
-        exoPlayer.volume = 1.0f
-
         // Loop forever
         exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
 

@@ -26,12 +26,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.R
+import com.github.clabersmith.sleepplayer.core.playback.Volume
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode.TrackPosition
-import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode.Volume
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode.VolumeLevel
 
 @Composable
 fun NowPlayingMenu(
@@ -91,7 +92,7 @@ fun NowPlayingMenu(
                     nowPlayingUiState.durationMs,
                     nowPlayingUiState.positionMs)
 
-                Volume -> VolumeBar(nowPlayingUiState.volume)
+                VolumeLevel -> VolumeBar(Volume.floatToPercent(nowPlayingUiState.volume))
             }
         }
 

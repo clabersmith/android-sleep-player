@@ -12,10 +12,13 @@ class FakePodcastPlayer : AudioPlayer {
     var playCalled = false
     var pauseCalled = false
     var stopCalled = false
-    var setVolumeCalled = false
+
+    val volumeHistory = mutableListOf<Float>()
+    var volumeSet: Float = 0f
+
     var lastSeekPosition: Long = 0L
 
-    var volumeSet: Int = 0
+
 
     private val _snapshotFlow = MutableStateFlow(
         PlayerSnapshot(
@@ -23,7 +26,7 @@ class FakePodcastPlayer : AudioPlayer {
             durationMs = 60_000L,
             isPlaying = false,
             startedAtMs = null,
-            volume = 60
+            volume = 0f
         )
     )
 
@@ -66,9 +69,13 @@ class FakePodcastPlayer : AudioPlayer {
 
     }
 
-    override fun setVolume(volume: Int) {
-        setVolumeCalled = true
+    override fun setVolume(volume: Float) {
+        volumeHistory.add(volume)
         volumeSet = volume
+    }
+
+    override fun getVolume(): Float {
+        return volumeSet
     }
 
     override fun seekTo(positionMs: Long) {

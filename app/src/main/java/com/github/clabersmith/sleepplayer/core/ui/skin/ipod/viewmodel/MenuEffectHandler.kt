@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
  * @param navigateToPlay Callback to navigate to the Now Playing screen.
  */
 class MenuEffectHandler(
+    private val scope: CoroutineScope,
     private val player: AudioPlayer,
     private val whiteNoisePlayer: WhiteNoisePlayer,
     private val startDownload: (state: MenuState.EpisodeDetail) -> Unit,
@@ -47,7 +48,8 @@ class MenuEffectHandler(
     private val stopScan: () -> Unit,
     private val updatePlaybackSettings: ( (PlaybackSettings) -> PlaybackSettings ) -> Unit,
     private val updateDisplayTheme: (MenuState.DisplaySettings.Theme) -> Unit,
-    private val updateAudioSettings: ( (AudioSettings) -> AudioSettings) -> Unit
+    private val updateAudioSettings: ( (AudioSettings) -> AudioSettings) -> Unit,
+    private val getWhiteNoiseBaseVolume: () -> Int
 ) {
     private var repeatJob: Job? = null
 
@@ -79,7 +81,10 @@ class MenuEffectHandler(
             // -----------------------------
 
             is MenuEffect.StartWhiteNoise -> {
+                val baseVolPercent = getWhiteNoiseBaseVolume()
+                val baseVol = (baseVolPercent / 100f).coerceIn(0f, 1f)
                 whiteNoisePlayer.play(effect.track)
+                whiteNoisePlayer.setVolume(baseVol)
             }
 
             is MenuEffect.StopWhiteNoise -> {
@@ -130,11 +135,11 @@ class MenuEffectHandler(
             is MenuEffect.StartRepeatingEffect -> {
                 repeatJob?.cancel()
 
-                repeatJob = CoroutineScope(Dispatchers.Main).launch {
+                repeatJob = scope.launch {
 
                     val startTime = System.currentTimeMillis()
 
-                    delay(200) // initial "hold" threshold (prevents accidental repeats)
+                    delay(240) // initial "hold" threshold (prevents accidental repeats)
 
                     while (isActive) {
                         val elapsed = System.currentTimeMillis() - startTime

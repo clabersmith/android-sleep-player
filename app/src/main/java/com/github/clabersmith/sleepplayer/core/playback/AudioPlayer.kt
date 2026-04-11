@@ -21,7 +21,8 @@ interface AudioPlayer {
 
     fun stop()
 
-    fun setVolume(volume: Int)
+    fun setVolume(volume: Float)
+    fun getVolume(): Float
 }
 
 data class PlayerSnapshot(
@@ -29,5 +30,5 @@ data class PlayerSnapshot(
     val durationMs: Long,
     val startedAtMs: Long?,
     val isPlaying: Boolean,
-    val volume: Int
+    val volume: Float
 )

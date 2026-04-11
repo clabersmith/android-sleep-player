@@ -25,6 +25,6 @@ data class WhiteNoiseTrack(
 
 data class WhiteNoiseSnapshot(
     val isPlaying: Boolean = false,
-    val volume: Float = .6f,
+    val volume: Float = 0f,
     val currentTrack: WhiteNoiseTrack? = null
 )

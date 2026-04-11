@@ -30,5 +30,6 @@ data class DisplaySettings(
 @Serializable
 data class AudioSettings(
     val clickEnabled: Boolean = true,
-    val masterVolume: Int = 100 // 0–100
+    val defaultPodcastVolume: Int = 100,     // 0–100
+    val defaultWhiteNoiseVolume: Int = 100   // 0–100
 )

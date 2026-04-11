@@ -15,9 +15,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant.now
 
 class ExoAudioPlayer(
-    context: Context
+    context: Context,
+    private val playbackClock: PlaybackClock
 ) : AudioPlayer {
 
     private val exoPlayer = ExoPlayer.Builder(context).build()
@@ -27,6 +29,7 @@ class ExoAudioPlayer(
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var startedAtMs: Long? = null
+    private var accumulatedPlayTimeMs: Long = 0L
 
     // -----------------
     // supports update of player snapshots for UI display
@@ -38,7 +41,7 @@ class ExoAudioPlayer(
                 durationMs = 0L,
                 startedAtMs = startedAtMs,
                 isPlaying = false,
-                volume = 60
+                volume = 0f
             )
         )
 
@@ -46,7 +49,6 @@ class ExoAudioPlayer(
         get() = _snapshotFlow
 
     init {
-        exoPlayer.volume = 0.6f // default to 60%
         exoPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 emitSnapshot()
@@ -83,10 +85,10 @@ class ExoAudioPlayer(
     private fun emitSnapshot() {
         _snapshotFlow.value = PlayerSnapshot(
             positionMs = exoPlayer.currentPosition,
-            durationMs = exoPlayer.duration,
+            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
             isPlaying = exoPlayer.isPlaying,
             startedAtMs = startedAtMs,
-            volume = exoPlayer.volume.times(100).toInt()
+            volume = exoPlayer.volume
         )
     }
 
@@ -100,10 +102,26 @@ class ExoAudioPlayer(
     }
 
     override fun play() {
+        if (exoPlayer.isPlaying) return // prevents resetting time accidentally
+
+        val now = playbackClock.now()
+
+        startedAtMs = if (startedAtMs == null) {
+            // first play
+            accumulatedPlayTimeMs = 0L
+            now
+        } else {
+            // resume
+            now - accumulatedPlayTimeMs
+        }
+
         exoPlayer.playWhenReady = true
     }
 
     override fun pause() {
+        val now = playbackClock.now()
+        accumulatedPlayTimeMs = now - (startedAtMs ?: now)
+
         exoPlayer.playWhenReady = false
     }
 
@@ -112,6 +130,9 @@ class ExoAudioPlayer(
     }
 
     override fun stop() {
+        startedAtMs = null
+        accumulatedPlayTimeMs = 0L
+
         exoPlayer.stop()
     }
 
@@ -121,9 +142,13 @@ class ExoAudioPlayer(
 
     }
 
-    override fun setVolume(volume: Int) {
-        exoPlayer.volume = volume / 100f
+    override fun setVolume(volume: Float) {
+        exoPlayer.volume = volume
         _snapshotFlow.value = _snapshotFlow.value.copy(volume = volume)
+    }
+
+    override fun getVolume(): Float {
+        return exoPlayer.volume
     }
 
     override fun currentPosition(): Long {

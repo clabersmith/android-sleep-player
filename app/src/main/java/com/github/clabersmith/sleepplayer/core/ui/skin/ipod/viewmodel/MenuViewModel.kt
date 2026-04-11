@@ -1,12 +1,12 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.playback.PlaybackClock
+import com.github.clabersmith.sleepplayer.core.playback.Volume
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.ActionRow
@@ -28,7 +28,6 @@ import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepos
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,6 +100,7 @@ class MenuViewModel(
     private var playProgressJob: Job? = null
 
     private var volumeTimeoutJob: Job? = null
+    private var overridePodcastVolumeLevel: Int? = null
     private var wasPlayingBeforeScan = false
 
     private val _activeSlot = MutableStateFlow<SlotState?>(null)
@@ -175,6 +175,11 @@ class MenuViewModel(
         playbackSettings = playbackPlaybackSettingsFlow,
         scope = viewModelScope,
         playbackClock = playbackClock,
+        getPodcastBaseVolume = {
+            overridePodcastVolumeLevel
+                ?: context.audioSettings.defaultPodcastVolume
+        },
+        getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume },
         stopPlaybackCompletely = {
             stopPlaybackCompletely()
         }
@@ -235,6 +240,7 @@ class MenuViewModel(
 
     // Effect handler that executes side effects emitted by menu state transitions
     private val effectHandler = MenuEffectHandler(
+        scope = viewModelScope,
         player = player,
         whiteNoisePlayer = whiteNoisePlayer,
         startDownload = { state -> startDownload(state) },
@@ -249,7 +255,8 @@ class MenuViewModel(
             updatePlaybackSettings(transform)
         },
         updateDisplayTheme = { theme -> updateDisplayTheme(theme) },
-        updateAudioSettings = { transform -> updateAudioSettings(transform) }
+        updateAudioSettings = { transform -> updateAudioSettings(transform) },
+        getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
@@ -396,7 +403,7 @@ class MenuViewModel(
 
     fun startScanForward() {
         // If we're in Volume mode, adjust volume instead of seeking
-        if (barMode.value == NowPlayingBarMode.Volume) {
+        if (barMode.value == NowPlayingBarMode.VolumeLevel) {
             adjustVolume(+5)
             startVolumeTimeout()
             return
@@ -429,7 +436,7 @@ class MenuViewModel(
 
     fun startScanBack() {
         // If we're in Volume mode, adjust volume instead of seeking
-        if (barMode.value == NowPlayingBarMode.Volume) {
+        if (barMode.value == NowPlayingBarMode.VolumeLevel) {
             adjustVolume(-5)
             startVolumeTimeout()
             return
@@ -478,12 +485,17 @@ class MenuViewModel(
     }
 
     private fun adjustVolume(delta: Int) {
-        val currentVolume = player.snapshotFlow.value.volume
-        val newVolume = (currentVolume + delta)
+        val current = overridePodcastVolumeLevel
+            ?: context.audioSettings.defaultPodcastVolume
+
+        val newVolumePercent = (current + delta)
             .coerceIn(0, 100)
 
-        player.setVolume(newVolume)
+        // store override
+        overridePodcastVolumeLevel = newVolumePercent
 
+        // apply immediately
+        player.setVolume(Volume.percentToFloat(newVolumePercent))
     }
 
     //------------------------------
@@ -506,6 +518,8 @@ class MenuViewModel(
             player.stop()
             _activeSlot.value = null
         }
+
+        overridePodcastVolumeLevel = null
 
         //Log.d("MenuViewModel", "_menuState.value: ${_menuState.value}")
 
@@ -554,10 +568,10 @@ class MenuViewModel(
             when (it) {
                 NowPlayingBarMode.TrackPosition -> {
                     startVolumeTimeout()
-                    NowPlayingBarMode.Volume
+                    NowPlayingBarMode.VolumeLevel
                 }
 
-                NowPlayingBarMode.Volume -> {
+                NowPlayingBarMode.VolumeLevel -> {
                     NowPlayingBarMode.TrackPosition
                 }
             }
@@ -692,6 +706,11 @@ class MenuViewModel(
 
                 player.play()
 
+                overridePodcastVolumeLevel = context.audioSettings.defaultPodcastVolume
+                val volume = Volume.percentToFloat(context.audioSettings.defaultPodcastVolume)
+
+                player.setVolume(volume)
+
                 _activeSlot.value = slot
             }
         }
@@ -816,7 +835,7 @@ data class NowPlayingUiState(
     val durationMs: Long,
     val startedAtMs: Long? = null,
     val isPlaying: Boolean,
-    val volume: Int,
+    val volume: Float,
     val barMode: NowPlayingBarMode = NowPlayingBarMode.TrackPosition
 ) {
     companion object {
@@ -825,13 +844,13 @@ data class NowPlayingUiState(
             positionMs = 0L,
             durationMs = 0L,
             isPlaying = false,
-            volume = 50
+            volume = .5f
         )
     }
 
     enum class NowPlayingBarMode {
         TrackPosition,
-        Volume
+        VolumeLevel
     }
 }
 

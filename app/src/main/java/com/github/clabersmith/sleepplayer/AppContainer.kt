@@ -47,9 +47,11 @@ class AppContainer(context: Context) {
     val persistedSettingsRepository: SettingsRepository
             = PersistedSettingsRepository(context.settingsDataStore)
 
-    val audioPlayer: AudioPlayer = ExoAudioPlayer(context)
+    val playbackClock: PlaybackClock = AudioPlaybackClock(appScope)
+
+    val audioPlayer: AudioPlayer = ExoAudioPlayer(context, playbackClock)
 
     val whiteNoisePlayer: WhiteNoisePlayer = ExoWhiteNoisePlayer(context)
 
-    val playbackClock: PlaybackClock = AudioPlaybackClock(appScope)
+
 }

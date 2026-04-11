@@ -28,8 +28,6 @@ import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisod
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownloaded
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToFeedsMenu
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToNowPlaying
-import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToPlaybackSettings
-import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToSettings
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToWhiteNoise
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePlaybackClock
 import com.github.clabersmith.sleepplayer.testutil.playback.FakeWhiteNoisePlayer
@@ -40,7 +38,6 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -490,7 +487,8 @@ class MenuViewModelTest() {
             PersistedSettings(
                 playbackSettings = PlaybackSettings(autoStopMinutes = 5),
                 displaySettings = DisplaySettings(theme = MenuState.DisplaySettings.Theme.Black),
-                audioSettings = AudioSettings(clickEnabled = false, masterVolume = 30)
+                audioSettings = AudioSettings(clickEnabled = false,
+                    defaultPodcastVolume = 30, defaultWhiteNoiseVolume = 50)
             )
         )
 
@@ -502,7 +500,9 @@ class MenuViewModelTest() {
         assertEquals(MenuState.DisplaySettings.Theme.Black,
             viewModel.menuState.value.context.displaySettings.theme)
         assertEquals(30,
-            viewModel.menuState.value.context.audioSettings.masterVolume)
+            viewModel.menuState.value.context.audioSettings.defaultPodcastVolume)
+        assertEquals(50,
+            viewModel.menuState.value.context.audioSettings.defaultWhiteNoiseVolume)
     }
 
     @Test
@@ -668,7 +668,7 @@ class MenuViewModelTest() {
         advanceUntilIdle()
 
         // test podcast fade started (volume changed)
-        assertTrue(fakePodcastPlayer.setVolumeCalled &&
+        assertTrue( fakePodcastPlayer.volumeHistory.size > 0 &&
                 fakePodcastPlayer.volumeSet < 100)
     }
 
@@ -701,8 +701,8 @@ class MenuViewModelTest() {
         fakePlaybackClock.advance(60_000)
         advanceUntilIdle()
 
-        // Assert: no fade occurred
-        assertFalse(fakePodcastPlayer.setVolumeCalled)
+        // Assert: no fade occurred (volume should not have been lowered)
+        assertTrue( fakePodcastPlayer.volumeHistory.none { it < 1.0f })
     }
 
     private suspend fun createNewViewModel(
