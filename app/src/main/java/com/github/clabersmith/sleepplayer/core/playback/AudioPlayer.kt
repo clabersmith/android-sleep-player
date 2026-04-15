@@ -30,5 +30,6 @@ data class PlayerSnapshot(
     val durationMs: Long,
     val startedAtMs: Long?,
     val isPlaying: Boolean,
-    val volume: Float
+    val volume: Float,
+    val isEnded: Boolean
 )

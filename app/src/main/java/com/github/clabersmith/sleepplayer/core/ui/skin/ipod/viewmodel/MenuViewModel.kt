@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -188,6 +189,7 @@ class MenuViewModel(
     init {
         load()
         observeWhiteNoise()
+        observePlaybackCompletion()
     }
 
     // Initial load of feeds, categories and persisted download slots
@@ -228,6 +230,20 @@ class MenuViewModel(
                     }
                 }
             }
+        }
+    }
+
+    private fun observePlaybackCompletion() {
+        viewModelScope.launch {
+            player.snapshotFlow
+                .map { it.isEnded }
+                .distinctUntilChanged()
+                .filter { it } // only when it becomes true
+                .collect {
+                    if (_activeSlot.value != null) {
+                        stopPlaybackCompletely()
+                    }
+                }
         }
     }
 

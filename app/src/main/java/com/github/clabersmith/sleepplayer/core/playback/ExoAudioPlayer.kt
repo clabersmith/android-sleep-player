@@ -41,7 +41,8 @@ class ExoAudioPlayer(
                 durationMs = 0L,
                 startedAtMs = startedAtMs,
                 isPlaying = false,
-                volume = 0f
+                volume = 0f,
+                isEnded = false
             )
         )
 
@@ -88,7 +89,8 @@ class ExoAudioPlayer(
             durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
             isPlaying = exoPlayer.isPlaying,
             startedAtMs = startedAtMs,
-            volume = exoPlayer.volume
+            volume = exoPlayer.volume,
+            isEnded = exoPlayer.playbackState == Player.STATE_ENDED
         )
     }
 
