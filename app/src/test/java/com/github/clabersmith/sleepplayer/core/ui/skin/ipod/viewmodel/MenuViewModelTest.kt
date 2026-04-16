@@ -5,7 +5,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.DisplaySettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
-import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
+import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSettings
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlot
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SettingsRepository
@@ -52,7 +52,7 @@ class MenuViewModelTest() {
     private lateinit var fakePodcastRepository : PodcastRepository
     private lateinit var fakePersistedSlotRepository : SlotRepository
     private lateinit var fakePersistedSettingsRepository : SettingsRepository
-    private lateinit var fakeDownloaderSuccess : Downloader
+    private lateinit var fakeDownloaderSuccess : PodcastDownloader
     private lateinit var fakeFileStorage : FakeFileStorage
     private lateinit var fakePodcastPlayer : FakePodcastPlayer
 
@@ -706,7 +706,7 @@ class MenuViewModelTest() {
     }
 
     private suspend fun createNewViewModel(
-        downloader: Downloader = fakeDownloaderSuccess
+        downloader: PodcastDownloader = fakeDownloaderSuccess
     ): MenuViewModel = MenuViewModel(
         podcastRepository = fakePodcastRepository,
         slotRepository = fakePersistedSlotRepository,

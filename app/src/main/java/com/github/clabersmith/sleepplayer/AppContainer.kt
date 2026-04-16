@@ -3,13 +3,14 @@ package com.github.clabersmith.sleepplayer
 import android.content.Context
 import com.github.clabersmith.sleepplayer.core.data.datastore.settingsDataStore
 import com.github.clabersmith.sleepplayer.core.data.datastore.slotDataStore
+import com.github.clabersmith.sleepplayer.core.data.download.FileDownloader
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlaybackClock
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.ExoAudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.ExoWhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.playback.PlaybackClock
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
-import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
+import com.github.clabersmith.sleepplayer.features.podcasts.data.download.DefaultPodcastDownloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSettingsRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSlotRepository
@@ -36,7 +37,9 @@ class AppContainer(context: Context) {
 
     val storage = AudioFileStorage(context)
 
-    val downloader = PodcastDownloader(httpClient, storage)
+    val fileDownloader = FileDownloader(httpClient)
+
+    val downloader = DefaultPodcastDownloader(fileDownloader, storage)
 
     val podcastRepository: PodcastRepository =
         DefaultPodcastRepository(dataSource)

@@ -20,7 +20,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettin
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.toPersisted
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.NowPlayingUiState.NowPlayingBarMode
-import com.github.clabersmith.sleepplayer.features.podcasts.data.download.Downloader
+import com.github.clabersmith.sleepplayer.features.podcasts.data.download.PodcastDownloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.PersistedSettings
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SettingsRepository
@@ -75,7 +75,7 @@ class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val slotRepository: SlotRepository,
     private val settingsRepository: SettingsRepository,
-    private val downloader: Downloader,
+    private val downloader: PodcastDownloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
     private val whiteNoisePlayer: WhiteNoisePlayer,

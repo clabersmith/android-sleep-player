@@ -26,7 +26,8 @@ class FakePodcastPlayer : AudioPlayer {
             durationMs = 60_000L,
             isPlaying = false,
             startedAtMs = null,
-            volume = 0f
+            volume = 0f,
+            isEnded = false
         )
     )
 
@@ -104,7 +105,8 @@ class FakePodcastPlayer : AudioPlayer {
             durationMs = duration,
             startedAtMs = startedAtMs,
             isPlaying = isPlaying,
-            volume = volumeSet
+            volume = volumeSet,
+            isEnded = false
         )
     }
 }
