@@ -21,7 +21,6 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuDownlo
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
 
-
 @Composable
 fun EpisodeDetailMenu(
     state: MenuState.EpisodeDetail
@@ -174,3 +173,4 @@ fun DownloadProgressRow(
         }
     }
 }
+

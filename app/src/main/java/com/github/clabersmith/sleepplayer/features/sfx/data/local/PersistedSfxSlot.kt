@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PersistedSfxSlot(
     val index: Int,
-    val lastDownloadedAt: Long?
+    val lastDownloadedAt: Long? = null
 )

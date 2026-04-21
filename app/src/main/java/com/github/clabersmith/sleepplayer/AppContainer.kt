@@ -2,6 +2,7 @@ package com.github.clabersmith.sleepplayer
 
 import android.content.Context
 import com.github.clabersmith.sleepplayer.core.data.datastore.settingsDataStore
+import com.github.clabersmith.sleepplayer.core.data.datastore.sfxSlotDataStore
 import com.github.clabersmith.sleepplayer.core.data.datastore.slotDataStore
 import com.github.clabersmith.sleepplayer.core.data.download.FileDownloader
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlaybackClock
@@ -20,6 +21,10 @@ import com.github.clabersmith.sleepplayer.features.podcasts.data.remote.HttpClie
 import com.github.clabersmith.sleepplayer.features.podcasts.data.remote.HttpPodcastDataSource
 import com.github.clabersmith.sleepplayer.features.podcasts.data.repository.DefaultPodcastRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
+import com.github.clabersmith.sleepplayer.features.sfx.data.download.DefaultSfxDownloader
+import com.github.clabersmith.sleepplayer.features.sfx.data.local.PersistedSfxSlotRepository
+import com.github.clabersmith.sleepplayer.features.sfx.data.remote.HttpSfxRemoteDataSource
+import com.github.clabersmith.sleepplayer.features.sfx.data.repository.DefaultSfxRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +44,9 @@ class AppContainer(context: Context) {
 
     val fileDownloader = FileDownloader(httpClient)
 
+    // -----------------------------
+    // Podcast download support
+    // -----------------------------
     val downloader = DefaultPodcastDownloader(fileDownloader, storage)
 
     val podcastRepository: PodcastRepository =
@@ -47,9 +55,27 @@ class AppContainer(context: Context) {
     val persistedSlotRepository: SlotRepository
         = PersistedSlotRepository(context.slotDataStore)
 
+    // -----------------------------
+    // SFX download support
+    // -----------------------------
+    val sfxRemote = HttpSfxRemoteDataSource(
+        client = httpClient,
+        url = "https://mypod-s3-demo-bucket.s3.us-east-1.amazonaws.com/sfx_feeds.json"
+    )
+    val sfxSlotRepo = PersistedSfxSlotRepository(context.sfxSlotDataStore)
+    val sfxDownloader = DefaultSfxDownloader(fileDownloader, storage)
+    val sfxRepository = DefaultSfxRepository(sfxRemote, sfxDownloader, sfxSlotRepo)
+
+    // -----------------------------
+    // Settings
+    // -----------------------------
+
     val persistedSettingsRepository: SettingsRepository
             = PersistedSettingsRepository(context.settingsDataStore)
 
+    // -----------------------------
+    // Audio playback
+    // -----------------------------
     val playbackClock: PlaybackClock = AudioPlaybackClock(appScope)
 
     val audioPlayer: AudioPlayer = ExoAudioPlayer(context, playbackClock)
