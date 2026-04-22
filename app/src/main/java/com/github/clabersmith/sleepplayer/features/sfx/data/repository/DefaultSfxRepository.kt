@@ -7,6 +7,7 @@ import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxDown
 import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.time.OffsetDateTime
 
 class DefaultSfxRepository(
     private val remote: SfxRemoteDataSource,
@@ -27,7 +28,16 @@ class DefaultSfxRepository(
             val feed = remote.fetchFeed()
             val slots = slotRepo.loadSlots()
 
-            val updates = feed.items.filter { item ->
+            // ✅ Map DTO → domain (derive index + parse timestamp)
+            val items = feed.items.mapIndexed { index, dto ->
+                SfxItem(
+                    index = index,
+                    url = dto.url,
+                    lastModified = parseTimestamp(dto.timestamp)
+                )
+            }
+
+            val updates = items.filter { item ->
                 val local = slots.find { it.index == item.index }
                 val localTs = local?.lastDownloadedAt ?: 0L
                 item.lastModified > localTs
@@ -47,6 +57,7 @@ class DefaultSfxRepository(
             )
 
             updates.forEachIndexed { i, item ->
+
                 _status.value = _status.value.copy(
                     message = "Updating ${i + 1} of ${updates.size}",
                     current = item.index
@@ -68,4 +79,22 @@ class DefaultSfxRepository(
             running = false
         }
     }
+
+    // -----------------------------------
+    // Helpers
+    // -----------------------------------
+
+    private fun parseTimestamp(timestamp: String): Long {
+        return runCatching {
+            OffsetDateTime.parse(timestamp)
+                .toInstant()
+                .toEpochMilli()
+        }.getOrDefault(0L)
+    }
 }
+
+data class SfxItem(
+    val index: Int,
+    val url: String,
+    val lastModified: Long
+)

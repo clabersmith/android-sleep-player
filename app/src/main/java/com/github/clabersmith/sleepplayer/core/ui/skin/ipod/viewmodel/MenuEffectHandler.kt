@@ -7,6 +7,7 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
+import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,6 +39,7 @@ class MenuEffectHandler(
     private val scope: CoroutineScope,
     private val player: AudioPlayer,
     private val whiteNoisePlayer: WhiteNoisePlayer,
+    private val sfxRepository: SfxRepository,
     private val startDownload: (state: MenuState.EpisodeDetail) -> Unit,
     private val cancelDownload: (state: MenuState.EpisodeDetail) -> Unit,
     private val deleteEpisode: (state: MenuState.EpisodeDetail) -> Unit,
@@ -163,6 +165,12 @@ class MenuEffectHandler(
             is MenuEffect.StopRepeatingEffect -> {
                 repeatJob?.cancel()
                 repeatJob = null
+            }
+
+            is MenuEffect.StartSfxDownload -> {
+                scope.launch {
+                    sfxRepository.startDownload()
+                }
             }
         }
     }

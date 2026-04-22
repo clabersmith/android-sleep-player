@@ -69,4 +69,9 @@ sealed interface MenuEffect {
     data class StartRepeatingEffect(val effect: MenuEffect) : MenuEffect
     object StopRepeatingEffect : MenuEffect
 
+    // -----------------------------
+    // SFX effects
+    // -----------------------------
+    object StartSfxDownload : MenuEffect
+
 }

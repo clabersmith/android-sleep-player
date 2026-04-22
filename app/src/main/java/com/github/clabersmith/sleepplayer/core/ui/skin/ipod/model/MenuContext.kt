@@ -2,6 +2,7 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
+import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxDownloadStatus
 import kotlinx.serialization.Serializable
 
 data class MenuContext(
@@ -12,7 +13,8 @@ data class MenuContext(
     val playbackSettings: PlaybackSettings,
     val currentWhiteNoiseTrack: WhiteNoiseTrack? = null,
     val displaySettings: DisplaySettings = DisplaySettings(),
-    val audioSettings: AudioSettings = AudioSettings()
+    val audioSettings: AudioSettings = AudioSettings(),
+    val sfxStatus: SfxDownloadStatus = SfxDownloadStatus()
 )
 
 @Serializable

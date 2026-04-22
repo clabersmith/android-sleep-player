@@ -4,6 +4,7 @@ import com.github.clabersmith.sleepplayer.R
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
+import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxDownloadStatus
 
 sealed class MenuState() {
     abstract val context: MenuContext
@@ -64,13 +65,14 @@ sealed class MenuState() {
 
                         2 ->
                             MenuTransition(
-                                newState = Settings(context),
+                                newState = Sfx(context),
                                 direction = NavDirection.Forward
                             )
 
                         3 ->
                             MenuTransition(
-                                newState = this   //Extras
+                                newState = Settings(context),
+                                direction = NavDirection.Forward
                             )
 
                         else -> MenuTransition(this)
@@ -1054,5 +1056,78 @@ sealed class MenuState() {
             value: Int,
             delta: Int
         ) = (value + delta).coerceIn(0, 100)
+    }
+
+    data class Sfx(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
+        override val itemCount = 2
+        override val title = "SFX"
+
+        override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) = copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
+            return when (event) {
+
+                MenuEvent.Confirm -> when (selectedIndex) {
+                    0 -> MenuTransition(
+                        newState = SfxDownload(
+                            context = context,
+                            status = context.sfxStatus
+                        ),
+                        direction = NavDirection.Forward
+                    )
+
+                    else -> MenuTransition(this)
+                }
+
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    Home(context),
+                    direction = NavDirection.Back
+                )
+
+                else -> MenuTransition(this)
+            }
+        }
+    }
+
+    data class SfxDownload(
+        override val context: MenuContext,
+        val status: SfxDownloadStatus,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
+        override val itemCount = 1
+        override val title = "SFX Download"
+
+        override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) =
+            copy(context = context, status = context.sfxStatus)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
+            return when (event) {
+
+                MenuEvent.Confirm -> MenuTransition(
+                    newState = this,
+                    effects = listOf(MenuEffect.StartSfxDownload)
+                )
+
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    newState = Sfx(context),
+                    direction = NavDirection.Back
+                )
+
+                else -> MenuTransition(this)
+            }
+        }
     }
 }

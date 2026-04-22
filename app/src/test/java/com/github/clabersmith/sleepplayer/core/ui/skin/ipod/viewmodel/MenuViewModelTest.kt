@@ -11,6 +11,7 @@ import com.github.clabersmith.sleepplayer.features.podcasts.data.local.Persisted
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SettingsRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepository
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
+import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxRepository
 import com.github.clabersmith.sleepplayer.testutil.MainDispatcherRule
 import com.github.clabersmith.sleepplayer.testutil.data.local.FakePersistedSlotRepository
 import com.github.clabersmith.sleepplayer.testutil.domain.repository.FakePodcastRepository
@@ -20,6 +21,7 @@ import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderP
 import com.github.clabersmith.sleepplayer.testutil.data.download.FakeDownloaderSuccess
 import com.github.clabersmith.sleepplayer.testutil.data.local.FakeFileStorage
 import com.github.clabersmith.sleepplayer.testutil.data.local.FakePersistedSettingsRepository
+import com.github.clabersmith.sleepplayer.testutil.domain.repository.FakeSfxRepository
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePodcastPlayer
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.click
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToAudioSettings
@@ -52,6 +54,7 @@ class MenuViewModelTest() {
     private lateinit var fakePodcastRepository : PodcastRepository
     private lateinit var fakePersistedSlotRepository : SlotRepository
     private lateinit var fakePersistedSettingsRepository : SettingsRepository
+    private lateinit var fakeSfxRepository : SfxRepository
     private lateinit var fakeDownloaderSuccess : PodcastDownloader
     private lateinit var fakeFileStorage : FakeFileStorage
     private lateinit var fakePodcastPlayer : FakePodcastPlayer
@@ -66,6 +69,7 @@ class MenuViewModelTest() {
         fakePodcastRepository = FakePodcastRepository()
         fakePersistedSlotRepository = FakePersistedSlotRepository()
         fakePersistedSettingsRepository = FakePersistedSettingsRepository()
+        fakeSfxRepository = FakeSfxRepository()
         fakeDownloaderSuccess = FakeDownloaderSuccess()
         fakeFileStorage = FakeFileStorage()
         fakePodcastPlayer = FakePodcastPlayer()
@@ -711,6 +715,7 @@ class MenuViewModelTest() {
         podcastRepository = fakePodcastRepository,
         slotRepository = fakePersistedSlotRepository,
         settingsRepository = fakePersistedSettingsRepository,
+        sfxRepository = fakeSfxRepository,
         downloader = downloader,
         storage = fakeFileStorage,
         player = fakePodcastPlayer,

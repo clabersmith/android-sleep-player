@@ -16,6 +16,7 @@ class ViewModelFactory(
                 podcastRepository = container.podcastRepository,
                 slotRepository = container.persistedSlotRepository,
                 settingsRepository = container.persistedSettingsRepository,
+                sfxRepository = container.sfxRepository,
                 downloader = container.downloader,
                 storage = container.storage,
                 player = container.audioPlayer,

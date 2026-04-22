@@ -22,11 +22,11 @@ fun HomeMenu(
     )
 
     items.add(
-        MenuItem(title = "Settings", showChevron = true)
+        MenuItem("SFX", showChevron = true)
     )
 
     items.add(
-        MenuItem(title = "Extras", showChevron = true)
+        MenuItem(title = "Settings", showChevron = true)
     )
 
     if (nowPlayingUiState.slot != null) items.add(

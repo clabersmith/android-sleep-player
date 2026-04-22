@@ -84,7 +84,7 @@ fun TestScope.navigateToSettings(
     viewModel: MenuViewModel
 ) {
     //Home, select Settings
-    viewModel.moveSelection(2)
+    viewModel.moveSelection(3)
 
     //Home -> Settings
     click(viewModel)

@@ -1,6 +1,7 @@
 package com.github.clabersmith.sleepplayer.features.sfx.data.remote
 
 import com.github.clabersmith.sleepplayer.features.sfx.data.remote.dto.SfxFeedDto
+import com.github.clabersmith.sleepplayer.features.sfx.data.remote.dto.SfxItemDto
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -11,6 +12,8 @@ class HttpSfxRemoteDataSource(
 ) : SfxRemoteDataSource {
 
     override suspend fun fetchFeed(): SfxFeedDto {
-        return client.get(url).body()
+        val items: List<SfxItemDto> = client.get(url).body()
+
+        return SfxFeedDto(items = items)
     }
 }

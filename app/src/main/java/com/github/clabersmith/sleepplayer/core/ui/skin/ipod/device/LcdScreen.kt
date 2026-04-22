@@ -35,6 +35,8 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PlayMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PlaybackSettingsMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.PodcastsMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.SettingsMenu
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.SfxDownloadMenu
+import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.SfxMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.WhiteNoiseMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.NavDirection
@@ -194,5 +196,7 @@ private fun RenderMenu(
         is MenuState.PlaybackSettings -> PlaybackSettingsMenu(menuState)
         is MenuState.DisplaySettings -> DisplaySettingsMenu(menuState)
         is MenuState.AudioSettings -> AudioSettingsMenu(menuState)
+        is MenuState.Sfx -> SfxMenu(menuState)
+        is MenuState.SfxDownload -> SfxDownloadMenu(menuState)
     }
 }

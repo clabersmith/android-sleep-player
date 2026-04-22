@@ -28,6 +28,7 @@ import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepos
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
+import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,6 +76,7 @@ class MenuViewModel(
     private val podcastRepository: PodcastRepository,
     private val slotRepository: SlotRepository,
     private val settingsRepository: SettingsRepository,
+    private val sfxRepository: SfxRepository,
     private val downloader: PodcastDownloader,
     private val storage: FileStorage,
     private val player: AudioPlayer,
@@ -190,6 +192,7 @@ class MenuViewModel(
         load()
         observeWhiteNoise()
         observePlaybackCompletion()
+        observeSfxStatus()
     }
 
     // Initial load of feeds, categories and persisted download slots
@@ -247,6 +250,16 @@ class MenuViewModel(
         }
     }
 
+    private fun observeSfxStatus() {
+        viewModelScope.launch {
+            sfxRepository.status.collect { status ->
+                updateContext { current ->
+                    current.copy(sfxStatus = status)
+                }
+            }
+        }
+    }
+
     private fun updateContext(transform: (MenuContext) -> MenuContext) {
         context = transform(context)
 
@@ -259,6 +272,7 @@ class MenuViewModel(
         scope = viewModelScope,
         player = player,
         whiteNoisePlayer = whiteNoisePlayer,
+        sfxRepository = sfxRepository,
         startDownload = { state -> startDownload(state) },
         cancelDownload = { state -> cancelDownload(state) },
         deleteEpisode = { state -> deleteEpisode(state) },
@@ -272,7 +286,7 @@ class MenuViewModel(
         },
         updateDisplayTheme = { theme -> updateDisplayTheme(theme) },
         updateAudioSettings = { transform -> updateAudioSettings(transform) },
-        getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume }
+        getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume },
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
