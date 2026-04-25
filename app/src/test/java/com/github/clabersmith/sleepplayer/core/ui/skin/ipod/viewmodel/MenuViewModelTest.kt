@@ -32,6 +32,7 @@ import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToFeedsM
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToNowPlaying
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToWhiteNoise
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePlaybackClock
+import com.github.clabersmith.sleepplayer.testutil.playback.FakeSfxPlayer
 import com.github.clabersmith.sleepplayer.testutil.playback.FakeWhiteNoisePlayer
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -60,6 +61,7 @@ class MenuViewModelTest() {
     private lateinit var fakePodcastPlayer : FakePodcastPlayer
 
     private lateinit var fakeWhiteNoisePlayer: FakeWhiteNoisePlayer
+    private lateinit var fakeSfxPlayer: FakeSfxPlayer
 
     private lateinit var fakePlaybackClock: FakePlaybackClock
 
@@ -74,6 +76,7 @@ class MenuViewModelTest() {
         fakeFileStorage = FakeFileStorage()
         fakePodcastPlayer = FakePodcastPlayer()
         fakeWhiteNoisePlayer = FakeWhiteNoisePlayer()
+        fakeSfxPlayer = FakeSfxPlayer()
         fakePlaybackClock = FakePlaybackClock()
     }
 
@@ -718,8 +721,9 @@ class MenuViewModelTest() {
         sfxRepository = fakeSfxRepository,
         downloader = downloader,
         storage = fakeFileStorage,
-        player = fakePodcastPlayer,
+        podcastPlayer = fakePodcastPlayer,
         whiteNoisePlayer = fakeWhiteNoisePlayer,
+        sfxPlayer = fakeSfxPlayer,
         playbackClock = fakePlaybackClock
     )
     private suspend fun persistFakeSlot() {

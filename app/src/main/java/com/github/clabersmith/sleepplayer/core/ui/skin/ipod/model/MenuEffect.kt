@@ -73,5 +73,7 @@ sealed interface MenuEffect {
     // SFX effects
     // -----------------------------
     object StartSfxDownload : MenuEffect
+    data class PlaySfx(val index: Int) : MenuEffect
 
+    object StopSfx : MenuEffect
 }

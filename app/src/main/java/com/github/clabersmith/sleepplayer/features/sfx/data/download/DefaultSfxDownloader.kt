@@ -11,11 +11,12 @@ class DefaultSfxDownloader(
 
     override suspend fun download(
         index: Int,
+        fileName: String,
         url: String
     ): File {
 
-        val fileName = "sfx_feed_$index.mp3"
-        val file = storage.createFile(fileName)
+        val sanitizedFileName = sanitizeFileName(fileName)
+        val file = storage.createFile(sanitizedFileName)
 
         return fileDownloader.download(
             url = url,
@@ -23,4 +24,10 @@ class DefaultSfxDownloader(
             onProgress = {}
         )
     }
+}
+
+private fun sanitizeFileName(name: String): String {
+    return name
+        .replace("[^A-Za-z0-9._-]".toRegex(), "_")
+        .take(100)
 }

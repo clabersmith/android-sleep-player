@@ -1,12 +1,14 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
+import com.github.clabersmith.sleepplayer.core.playback.SfxPlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.PlaybackSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.SlotState
+import com.github.clabersmith.sleepplayer.features.podcasts.data.local.FileStorage
 import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,9 +39,11 @@ import kotlinx.coroutines.launch
  */
 class MenuEffectHandler(
     private val scope: CoroutineScope,
-    private val player: AudioPlayer,
+    private val podcastPlayer: AudioPlayer,
     private val whiteNoisePlayer: WhiteNoisePlayer,
+    private val sfxPlayer: SfxPlayer,
     private val sfxRepository: SfxRepository,
+    private val storage: FileStorage,
     private val startDownload: (state: MenuState.EpisodeDetail) -> Unit,
     private val cancelDownload: (state: MenuState.EpisodeDetail) -> Unit,
     private val deleteEpisode: (state: MenuState.EpisodeDetail) -> Unit,
@@ -51,7 +55,8 @@ class MenuEffectHandler(
     private val updatePlaybackSettings: ( (PlaybackSettings) -> PlaybackSettings ) -> Unit,
     private val updateDisplayTheme: (MenuState.DisplaySettings.Theme) -> Unit,
     private val updateAudioSettings: ( (AudioSettings) -> AudioSettings) -> Unit,
-    private val getWhiteNoiseBaseVolume: () -> Int
+    private val getWhiteNoiseBaseVolume: () -> Int,
+    private val stopPodcastPlayback: () -> Unit
 ) {
     private var repeatJob: Job? = null
 
@@ -67,15 +72,15 @@ class MenuEffectHandler(
             }
 
             is MenuEffect.TogglePlayPause -> {
-                if (player.isPlaying()) {
-                    player.pause()
+                if (podcastPlayer.isPlaying()) {
+                    podcastPlayer.pause()
                 } else {
-                    player.play()
+                    podcastPlayer.play()
                 }
             }
 
             is MenuEffect.StopPlayback -> {
-                player.stop()
+                podcastPlayer.stop()
             }
 
             // -----------------------------
@@ -170,6 +175,35 @@ class MenuEffectHandler(
             is MenuEffect.StartSfxDownload -> {
                 scope.launch {
                     sfxRepository.startDownload()
+                }
+            }
+
+            is MenuEffect.PlaySfx -> {
+                val index = effect.index
+
+                scope.launch {
+                    // Stop podcast if playing
+                    stopPodcastPlayback()
+
+                    val current = sfxPlayer.snapshotFlow.value.currentIndex
+
+                    if (current == index && sfxPlayer.isPlaying()) {
+                        sfxPlayer.stop()
+                        return@launch
+                    }
+
+                    val fileName = sfxRepository.getFileNameForIndex(index)
+                    if (fileName.isNullOrBlank()) return@launch
+
+                    val filePath = storage.getFilePath(fileName)
+
+                    sfxPlayer.play(filePath, index)
+                }
+            }
+
+            is MenuEffect.StopSfx -> {
+                scope.launch {
+                    sfxPlayer.stop()
                 }
             }
         }

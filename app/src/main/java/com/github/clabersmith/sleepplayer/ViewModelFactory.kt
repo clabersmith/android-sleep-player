@@ -19,8 +19,9 @@ class ViewModelFactory(
                 sfxRepository = container.sfxRepository,
                 downloader = container.downloader,
                 storage = container.storage,
-                player = container.audioPlayer,
+                podcastPlayer = container.podcastPlayer,
                 whiteNoisePlayer = container.whiteNoisePlayer,
+                sfxPlayer = container.sfxPlayer,
                 playbackClock = container.playbackClock) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

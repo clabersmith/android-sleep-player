@@ -6,6 +6,8 @@ import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.AudioSource
 import com.github.clabersmith.sleepplayer.core.playback.PlaybackClock
+import com.github.clabersmith.sleepplayer.core.playback.SfxPlayer
+import com.github.clabersmith.sleepplayer.core.playback.SfxSnapshot
 import com.github.clabersmith.sleepplayer.core.playback.Volume
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
@@ -28,6 +30,7 @@ import com.github.clabersmith.sleepplayer.features.podcasts.data.local.SlotRepos
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastEpisode
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.repository.PodcastRepository
+import com.github.clabersmith.sleepplayer.features.sfx.data.local.PersistedSfxSlot
 import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -57,7 +60,7 @@ import kotlin.math.exp
  *   play/pause, confirm and back/menu navigation.
  * - Manages episode downloads: start/cancel, progress reporting, persisting/removing
  *   slots, and deleting downloaded files via [downloader], [slotRepository] and [storage].
- * - Manages audio playback via [player]: loading local files, play/pause/seek and
+ * - Manages audio playback via [podcastPlayer]: loading local files, play/pause/seek and
  *   periodic progress updates (polled on [playbackDispatcher]).
  *
  * Concurrency and lifecycle:
@@ -69,7 +72,7 @@ import kotlin.math.exp
  * @param slotRepository repository for persisted download slot data
  * @param downloader component responsible for downloading episode audio
  * @param storage file helper for existence checks, deletion and path resolution
- * @param player audio player used to play and seek local audio files
+ * @param podcastPlayer audio player used to play and seek local audio files
  * @param playbackDispatcher coroutine dispatcher for playback-related tasks
  */
 class MenuViewModel(
@@ -79,8 +82,9 @@ class MenuViewModel(
     private val sfxRepository: SfxRepository,
     private val downloader: PodcastDownloader,
     private val storage: FileStorage,
-    private val player: AudioPlayer,
+    private val podcastPlayer: AudioPlayer,
     private val whiteNoisePlayer: WhiteNoisePlayer,
+    private val sfxPlayer: SfxPlayer,
     private val playbackClock: PlaybackClock
 ) : ViewModel() {
 
@@ -115,7 +119,7 @@ class MenuViewModel(
     val nowPlayingUiState: StateFlow<NowPlayingUiState> =
         combine(
             activeSlot,
-            player.snapshotFlow,
+            podcastPlayer.snapshotFlow,
             barMode
         ) { slot, snapshot, mode ->
 
@@ -148,6 +152,15 @@ class MenuViewModel(
                 SharingStarted.WhileSubscribed(5000),
                 WhiteNoiseUiState()
             )
+
+    val sfxUiState: StateFlow<SfxSnapshot> =
+        sfxPlayer.snapshotFlow
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                SfxSnapshot()
+            )
+
     val homeItemsFlow: StateFlow<List<HomeItem>> =
         nowPlayingUiState
             .map { ui ->
@@ -173,7 +186,7 @@ class MenuViewModel(
 
     private val audioDuckingCoordinator = AudioDuckingCoordinator(
         nowPlayingUiState = nowPlayingUiState,
-        player = player,
+        player = podcastPlayer,
         whiteNoisePlayer = whiteNoisePlayer,
         playbackSettings = playbackPlaybackSettingsFlow,
         scope = viewModelScope,
@@ -192,7 +205,9 @@ class MenuViewModel(
         load()
         observeWhiteNoise()
         observePlaybackCompletion()
-        observeSfxStatus()
+        observeSfxDownloadStatus()
+        observeSfxPlayStatus()
+        observeSfxSlots()
     }
 
     // Initial load of feeds, categories and persisted download slots
@@ -238,7 +253,7 @@ class MenuViewModel(
 
     private fun observePlaybackCompletion() {
         viewModelScope.launch {
-            player.snapshotFlow
+            podcastPlayer.snapshotFlow
                 .map { it.isEnded }
                 .distinctUntilChanged()
                 .filter { it } // only when it becomes true
@@ -250,11 +265,51 @@ class MenuViewModel(
         }
     }
 
-    private fun observeSfxStatus() {
+    private fun observeSfxDownloadStatus() {
         viewModelScope.launch {
             sfxRepository.status.collect { status ->
                 updateContext { current ->
-                    current.copy(sfxStatus = status)
+                    current.copy(sfxDownloadStatus = status)
+                }
+            }
+        }
+    }
+
+    private fun observeSfxSlots() {
+        viewModelScope.launch {
+            var lastEmitted: Pair<List<PersistedSfxSlot>, Long?>? = null
+
+            while (isActive) {
+
+                val slots = sfxRepository.getSlots()
+
+                val lastUpdated = slots
+                    .maxOfOrNull { it.lastDownloadedAt ?: 0L }
+                    ?.takeIf { it > 0 }
+
+                val current = slots to lastUpdated
+
+                // Only update if something actually changed
+                if (current != lastEmitted) {
+                    updateContext {
+                        it.copy(
+                            sfxSlots = slots,
+                            sfxLastUpdatedAt = lastUpdated
+                        )
+                    }
+                    lastEmitted = current
+                }
+
+                delay(1_000)
+            }
+        }
+    }
+
+    private fun observeSfxPlayStatus() {
+        viewModelScope.launch {
+            sfxUiState.collect { sfx ->
+                updateContext {
+                    it.copy(activeSfxIndex = sfx.currentIndex)
                 }
             }
         }
@@ -270,8 +325,10 @@ class MenuViewModel(
     // Effect handler that executes side effects emitted by menu state transitions
     private val effectHandler = MenuEffectHandler(
         scope = viewModelScope,
-        player = player,
+        podcastPlayer = podcastPlayer,
         whiteNoisePlayer = whiteNoisePlayer,
+        sfxPlayer = sfxPlayer,
+        storage = storage,
         sfxRepository = sfxRepository,
         startDownload = { state -> startDownload(state) },
         cancelDownload = { state -> cancelDownload(state) },
@@ -287,6 +344,7 @@ class MenuViewModel(
         updateDisplayTheme = { theme -> updateDisplayTheme(theme) },
         updateAudioSettings = { transform -> updateAudioSettings(transform) },
         getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume },
+        stopPodcastPlayback = { stopPlaybackCompletely() }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
@@ -312,7 +370,7 @@ class MenuViewModel(
         super.onCleared()
         playProgressJob?.cancel()
         scanJob?.cancel()
-        player.release()
+        podcastPlayer.release()
     }
 
     private fun startVolumeTimeout() {
@@ -441,8 +499,8 @@ class MenuViewModel(
 
         if (scanJob != null) return
 
-        wasPlayingBeforeScan = player.isPlaying()
-        player.pause()
+        wasPlayingBeforeScan = podcastPlayer.isPlaying()
+        podcastPlayer.pause()
 
         scanJob = viewModelScope.launch {
             val startTime = System.currentTimeMillis()
@@ -451,13 +509,13 @@ class MenuViewModel(
                 val elapsed = System.currentTimeMillis() - startTime
                 val delta = computeScanDelta(elapsed)
 
-                val current = player.currentPosition()
-                val duration = player.duration()
+                val current = podcastPlayer.currentPosition()
+                val duration = podcastPlayer.duration()
 
                 val newPosition = (current + delta)
                     .coerceAtMost(duration)
 
-                player.seekTo(newPosition)
+                podcastPlayer.seekTo(newPosition)
 
                 delay(150)
             }
@@ -474,8 +532,8 @@ class MenuViewModel(
 
         if (scanJob != null) return
 
-        wasPlayingBeforeScan = player.isPlaying()
-        player.pause()
+        wasPlayingBeforeScan = podcastPlayer.isPlaying()
+        podcastPlayer.pause()
 
         scanJob = viewModelScope.launch {
             val startTime = System.currentTimeMillis()
@@ -484,12 +542,12 @@ class MenuViewModel(
                 val elapsedMs = System.currentTimeMillis() - startTime
                 val delta = computeScanDelta(elapsedMs)
 
-                val current = player.currentPosition()
+                val current = podcastPlayer.currentPosition()
 
                 val newPosition = (current - delta)
                     .coerceAtLeast(0)
 
-                player.seekTo(newPosition)
+                podcastPlayer.seekTo(newPosition)
 
                 delay(150)
             }
@@ -501,7 +559,7 @@ class MenuViewModel(
         scanJob = null
 
         if (wasPlayingBeforeScan) {
-            player.play()
+            podcastPlayer.play()
         }
     }
 
@@ -525,7 +583,7 @@ class MenuViewModel(
         overridePodcastVolumeLevel = newVolumePercent
 
         // apply immediately
-        player.setVolume(Volume.percentToFloat(newVolumePercent))
+        podcastPlayer.setVolume(Volume.percentToFloat(newVolumePercent))
     }
 
     //------------------------------
@@ -533,8 +591,8 @@ class MenuViewModel(
     //------------------------------
     fun onPlayPauseShortPressed() {
         if (_activeSlot.value != null) {
-            if (player.isPlaying()) player.pause()
-            else player.play()
+            if (podcastPlayer.isPlaying()) podcastPlayer.pause()
+            else podcastPlayer.play()
         } else if (_menuState.value is MenuState.NowPlaying){
             //If we stopped the track in NowPlaying, we should be able to start again
             val current = _menuState.value as MenuState.NowPlaying
@@ -545,7 +603,7 @@ class MenuViewModel(
 
     fun stopPlaybackCompletely() {
         if (_activeSlot.value != null) {
-            player.stop()
+            podcastPlayer.stop()
             _activeSlot.value = null
         }
 
@@ -726,20 +784,22 @@ class MenuViewModel(
         if (_activeSlot.value != slot) {
 
             viewModelScope.launch {
+                sfxPlayer.stop()  //make sure we don't run sfx on top of the podcast audio
 
                 val path = storage.getFilePath(slot.fileName)
 
-                player.load(AudioSource(path))
+                podcastPlayer.load(AudioSource(path))
 
                 val now = playbackClock.now()
-                player.setStartedAt(now)
+                podcastPlayer.setStartedAt(now)
 
-                player.play()
+                podcastPlayer.play()
+
 
                 overridePodcastVolumeLevel = context.audioSettings.defaultPodcastVolume
                 val volume = Volume.percentToFloat(context.audioSettings.defaultPodcastVolume)
 
-                player.setVolume(volume)
+                podcastPlayer.setVolume(volume)
 
                 _activeSlot.value = slot
             }

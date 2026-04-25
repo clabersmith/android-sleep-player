@@ -5,5 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PersistedSfxSlot(
     val index: Int,
+    val fileName: String = "",
     val lastDownloadedAt: Long? = null
 )

@@ -1079,8 +1079,13 @@ sealed class MenuState() {
                     0 -> MenuTransition(
                         newState = SfxDownload(
                             context = context,
-                            status = context.sfxStatus
+                            status = context.sfxDownloadStatus
                         ),
+                        direction = NavDirection.Forward
+                    )
+
+                    1 -> MenuTransition(
+                        newState = SfxPlay(context),
                         direction = NavDirection.Forward
                     )
 
@@ -1109,7 +1114,7 @@ sealed class MenuState() {
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
         override fun withContext(context: MenuContext) =
-            copy(context = context, status = context.sfxStatus)
+            copy(context = context, status = context.sfxDownloadStatus)
 
         override fun reduce(event: MenuEvent): MenuTransition {
             handleCommonEvents(event)?.let { return it }
@@ -1123,6 +1128,50 @@ sealed class MenuState() {
 
                 MenuEvent.MenuShortPress -> MenuTransition(
                     newState = Sfx(context),
+                    direction = NavDirection.Back
+                )
+
+                else -> MenuTransition(this)
+            }
+        }
+    }
+
+    data class SfxPlay(
+        override val context: MenuContext,
+        override val selectedIndex: Int = 0
+    ) : MenuState() {
+
+        override val title = "SFX"
+
+        override val itemCount: Int
+            get() = context.sfxSlots.size
+
+        override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+
+        override fun withContext(context: MenuContext) = copy(context = context)
+
+        override fun reduce(event: MenuEvent): MenuTransition {
+            handleCommonEvents(event)?.let { return it }
+
+            return when (event) {
+
+                MenuEvent.Confirm -> {
+                    val current = context.activeSfxIndex
+
+                    val effect = if (current == selectedIndex) {
+                        MenuEffect.StopSfx
+                    } else {
+                        MenuEffect.PlaySfx(selectedIndex)
+                    }
+
+                    MenuTransition(
+                        newState = this,
+                        effects = listOf(effect)
+                    )
+                }
+
+                MenuEvent.MenuShortPress -> MenuTransition(
+                    MenuState.Home(context),
                     direction = NavDirection.Back
                 )
 

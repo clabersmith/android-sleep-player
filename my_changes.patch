@@ -1,0 +1,639 @@
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/AppContainer.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/AppContainer.kt
+index f047ad4..b5472d9 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/AppContainer.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/AppContainer.kt
+@@ -7,7 +7,7 @@ import com.github.clabersmith.sleepplayer.core.data.datastore.slotDataStore
+ import com.github.clabersmith.sleepplayer.core.data.download.FileDownloader
+ import com.github.clabersmith.sleepplayer.core.playback.AudioPlaybackClock
+ import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
+-import com.github.clabersmith.sleepplayer.core.playback.ExoAudioPlayer
++import com.github.clabersmith.sleepplayer.core.playback.ExoPodcastPlayer
+ import com.github.clabersmith.sleepplayer.core.playback.ExoWhiteNoisePlayer
+ import com.github.clabersmith.sleepplayer.core.playback.PlaybackClock
+ import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
+@@ -78,7 +78,7 @@ class AppContainer(context: Context) {
+     // -----------------------------
+     val playbackClock: PlaybackClock = AudioPlaybackClock(appScope)
+ 
+-    val audioPlayer: AudioPlayer = ExoAudioPlayer(context, playbackClock)
++    val podcastPlayer: AudioPlayer = ExoPodcastPlayer(context, playbackClock)
+ 
+     val whiteNoisePlayer: WhiteNoisePlayer = ExoWhiteNoisePlayer(context)
+ 
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/ViewModelFactory.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/ViewModelFactory.kt
+index 7fc98ae..8abe197 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/ViewModelFactory.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/ViewModelFactory.kt
+@@ -19,7 +19,7 @@ class ViewModelFactory(
+                 sfxRepository = container.sfxRepository,
+                 downloader = container.downloader,
+                 storage = container.storage,
+-                player = container.audioPlayer,
++                podcastPlayer = container.podcastPlayer,
+                 whiteNoisePlayer = container.whiteNoisePlayer,
+                 playbackClock = container.playbackClock) as T
+         }
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/core/playback/ExoPodcastPlayer.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/core/playback/ExoPodcastPlayer.kt
+index ed9ed12..4f5ce5c 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/core/playback/ExoPodcastPlayer.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/core/playback/ExoPodcastPlayer.kt
+@@ -15,9 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.isActive
+ import kotlinx.coroutines.launch
+ import kotlinx.coroutines.withContext
+-import java.time.Instant.now
+ 
+-class ExoAudioPlayer(
++class ExoPodcastPlayer(
+     context: Context,
+     private val playbackClock: PlaybackClock
+ ) : AudioPlayer {
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuContext.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuContext.kt
+index fb496bf..fb0dc02 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuContext.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuContext.kt
+@@ -14,7 +14,8 @@ data class MenuContext(
+     val currentWhiteNoiseTrack: WhiteNoiseTrack? = null,
+     val displaySettings: DisplaySettings = DisplaySettings(),
+     val audioSettings: AudioSettings = AudioSettings(),
+-    val sfxStatus: SfxDownloadStatus = SfxDownloadStatus()
++    val sfxDownloadStatus: SfxDownloadStatus = SfxDownloadStatus(),
++    val activeSfxIndex: Int? = null // 0-based
+ )
+ 
+ @Serializable
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuEffect.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuEffect.kt
+index 4e9136d..e9f4694 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuEffect.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuEffect.kt
+@@ -73,5 +73,6 @@ sealed interface MenuEffect {
+     // SFX effects
+     // -----------------------------
+     object StartSfxDownload : MenuEffect
++    data class PlaySfx(val index: Int) : MenuEffect
+ 
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuState.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuState.kt
+index df3a8ca..a256226 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuState.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/model/MenuState.kt
+@@ -1079,7 +1079,7 @@ sealed class MenuState() {
+                     0 -> MenuTransition(
+                         newState = SfxDownload(
+                             context = context,
+-                            status = context.sfxStatus
++                            status = context.sfxDownloadStatus
+                         ),
+                         direction = NavDirection.Forward
+                     )
+@@ -1109,7 +1109,7 @@ sealed class MenuState() {
+         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
+ 
+         override fun withContext(context: MenuContext) =
+-            copy(context = context, status = context.sfxStatus)
++            copy(context = context, status = context.sfxDownloadStatus)
+ 
+         override fun reduce(event: MenuEvent): MenuTransition {
+             handleCommonEvents(event)?.let { return it }
+@@ -1130,4 +1130,41 @@ sealed class MenuState() {
+             }
+         }
+     }
++
++    data class SfxPlay(
++        override val context: MenuContext,
++        override val selectedIndex: Int = 0
++    ) : MenuState() {
++
++        override val title = "SFX"
++
++        override val itemCount: Int = 4
++
++        override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
++
++        override fun withContext(context: MenuContext) = copy(context = context)
++
++        override fun reduce(event: MenuEvent): MenuTransition {
++            handleCommonEvents(event)?.let { return it }
++
++            return when (event) {
++
++                MenuEvent.Confirm -> {
++                    MenuTransition(
++                        newState = copy(context = context),
++                        effects = listOf(
++                            MenuEffect.PlaySfx(selectedIndex)
++                        )
++                    )
++                }
++
++                MenuEvent.MenuShortPress -> MenuTransition(
++                    MenuState.Home(context),
++                    direction = NavDirection.Back
++                )
++
++                else -> MenuTransition(this)
++            }
++        }
++    }
+ }
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuEffectHandler.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuEffectHandler.kt
+index d996bad..c96cf7b 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuEffectHandler.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuEffectHandler.kt
+@@ -1,6 +1,7 @@
+ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
+ 
+ import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
++import com.github.clabersmith.sleepplayer.core.playback.SfxPlayer
+ import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
+ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
+ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
+@@ -37,8 +38,9 @@ import kotlinx.coroutines.launch
+  */
+ class MenuEffectHandler(
+     private val scope: CoroutineScope,
+-    private val player: AudioPlayer,
++    private val podcastPlayer: AudioPlayer,
+     private val whiteNoisePlayer: WhiteNoisePlayer,
++    private val sfxPlayer: SfxPlayer,
+     private val sfxRepository: SfxRepository,
+     private val startDownload: (state: MenuState.EpisodeDetail) -> Unit,
+     private val cancelDownload: (state: MenuState.EpisodeDetail) -> Unit,
+@@ -67,15 +69,15 @@ class MenuEffectHandler(
+             }
+ 
+             is MenuEffect.TogglePlayPause -> {
+-                if (player.isPlaying()) {
+-                    player.pause()
++                if (podcastPlayer.isPlaying()) {
++                    podcastPlayer.pause()
+                 } else {
+-                    player.play()
++                    podcastPlayer.play()
+                 }
+             }
+ 
+             is MenuEffect.StopPlayback -> {
+-                player.stop()
++                podcastPlayer.stop()
+             }
+ 
+             // -----------------------------
+@@ -172,6 +174,28 @@ class MenuEffectHandler(
+                     sfxRepository.startDownload()
+                 }
+             }
++
++            is MenuEffect.PlaySfx -> {
++                val index = effect.index
++
++                scope.launch {
++
++
++                    // Stop podcast if playing
++                    if (podcastPlayer.isPlaying()) {
++                        podcastPlayer.stop()
++                    }
++
++                    // Toggle behavior (nice UX)
++                    val current = sfxPlayer.snapshotFlow.value.currentIndex
++
++                    if (current == index && sfxPlayer.isPlaying()) {
++                        sfxPlayer.stop()
++                    } else {
++                        sfxPlayer.play(index)
++                    }
++                }
++            }
+         }
+     }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModel.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModel.kt
+index 9de2229..9ed09f0 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModel.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModel.kt
+@@ -6,6 +6,8 @@ import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
+ import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
+ import com.github.clabersmith.sleepplayer.core.playback.AudioSource
+ import com.github.clabersmith.sleepplayer.core.playback.PlaybackClock
++import com.github.clabersmith.sleepplayer.core.playback.SfxPlayer
++import com.github.clabersmith.sleepplayer.core.playback.SfxSnapshot
+ import com.github.clabersmith.sleepplayer.core.playback.Volume
+ import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
+ import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
+@@ -57,7 +59,7 @@ import kotlin.math.exp
+  *   play/pause, confirm and back/menu navigation.
+  * - Manages episode downloads: start/cancel, progress reporting, persisting/removing
+  *   slots, and deleting downloaded files via [downloader], [slotRepository] and [storage].
+- * - Manages audio playback via [player]: loading local files, play/pause/seek and
++ * - Manages audio playback via [podcastPlayer]: loading local files, play/pause/seek and
+  *   periodic progress updates (polled on [playbackDispatcher]).
+  *
+  * Concurrency and lifecycle:
+@@ -69,7 +71,7 @@ import kotlin.math.exp
+  * @param slotRepository repository for persisted download slot data
+  * @param downloader component responsible for downloading episode audio
+  * @param storage file helper for existence checks, deletion and path resolution
+- * @param player audio player used to play and seek local audio files
++ * @param podcastPlayer audio player used to play and seek local audio files
+  * @param playbackDispatcher coroutine dispatcher for playback-related tasks
+  */
+ class MenuViewModel(
+@@ -79,8 +81,9 @@ class MenuViewModel(
+     private val sfxRepository: SfxRepository,
+     private val downloader: PodcastDownloader,
+     private val storage: FileStorage,
+-    private val player: AudioPlayer,
++    private val podcastPlayer: AudioPlayer,
+     private val whiteNoisePlayer: WhiteNoisePlayer,
++    private val sfxPlayer: SfxPlayer,
+     private val playbackClock: PlaybackClock
+ ) : ViewModel() {
+ 
+@@ -115,7 +118,7 @@ class MenuViewModel(
+     val nowPlayingUiState: StateFlow<NowPlayingUiState> =
+         combine(
+             activeSlot,
+-            player.snapshotFlow,
++            podcastPlayer.snapshotFlow,
+             barMode
+         ) { slot, snapshot, mode ->
+ 
+@@ -148,6 +151,15 @@ class MenuViewModel(
+                 SharingStarted.WhileSubscribed(5000),
+                 WhiteNoiseUiState()
+             )
++
++    val sfxUiState: StateFlow<SfxSnapshot> =
++        sfxPlayer.snapshotFlow
++            .stateIn(
++                viewModelScope,
++                SharingStarted.WhileSubscribed(5000),
++                SfxSnapshot()
++            )
++
+     val homeItemsFlow: StateFlow<List<HomeItem>> =
+         nowPlayingUiState
+             .map { ui ->
+@@ -173,7 +185,7 @@ class MenuViewModel(
+ 
+     private val audioDuckingCoordinator = AudioDuckingCoordinator(
+         nowPlayingUiState = nowPlayingUiState,
+-        player = player,
++        player = podcastPlayer,
+         whiteNoisePlayer = whiteNoisePlayer,
+         playbackSettings = playbackPlaybackSettingsFlow,
+         scope = viewModelScope,
+@@ -192,7 +204,8 @@ class MenuViewModel(
+         load()
+         observeWhiteNoise()
+         observePlaybackCompletion()
+-        observeSfxStatus()
++        observeSfxDownloadStatus()
++        observeSfxPlayStatus()
+     }
+ 
+     // Initial load of feeds, categories and persisted download slots
+@@ -238,7 +251,7 @@ class MenuViewModel(
+ 
+     private fun observePlaybackCompletion() {
+         viewModelScope.launch {
+-            player.snapshotFlow
++            podcastPlayer.snapshotFlow
+                 .map { it.isEnded }
+                 .distinctUntilChanged()
+                 .filter { it } // only when it becomes true
+@@ -250,11 +263,21 @@ class MenuViewModel(
+         }
+     }
+ 
+-    private fun observeSfxStatus() {
++    private fun observeSfxDownloadStatus() {
+         viewModelScope.launch {
+             sfxRepository.status.collect { status ->
+                 updateContext { current ->
+-                    current.copy(sfxStatus = status)
++                    current.copy(sfxDownloadStatus = status)
++                }
++            }
++        }
++    }
++
++    private fun observeSfxPlayStatus() {
++        viewModelScope.launch {
++            sfxUiState.collect { sfx ->
++                updateContext {
++                    it.copy(activeSfxIndex = sfx.currentIndex)
+                 }
+             }
+         }
+@@ -270,8 +293,9 @@ class MenuViewModel(
+     // Effect handler that executes side effects emitted by menu state transitions
+     private val effectHandler = MenuEffectHandler(
+         scope = viewModelScope,
+-        player = player,
++        podcastPlayer = podcastPlayer,
+         whiteNoisePlayer = whiteNoisePlayer,
++        sfxPlayer = sfxPlayer,
+         sfxRepository = sfxRepository,
+         startDownload = { state -> startDownload(state) },
+         cancelDownload = { state -> cancelDownload(state) },
+@@ -312,7 +336,7 @@ class MenuViewModel(
+         super.onCleared()
+         playProgressJob?.cancel()
+         scanJob?.cancel()
+-        player.release()
++        podcastPlayer.release()
+     }
+ 
+     private fun startVolumeTimeout() {
+@@ -441,8 +465,8 @@ class MenuViewModel(
+ 
+         if (scanJob != null) return
+ 
+-        wasPlayingBeforeScan = player.isPlaying()
+-        player.pause()
++        wasPlayingBeforeScan = podcastPlayer.isPlaying()
++        podcastPlayer.pause()
+ 
+         scanJob = viewModelScope.launch {
+             val startTime = System.currentTimeMillis()
+@@ -451,13 +475,13 @@ class MenuViewModel(
+                 val elapsed = System.currentTimeMillis() - startTime
+                 val delta = computeScanDelta(elapsed)
+ 
+-                val current = player.currentPosition()
+-                val duration = player.duration()
++                val current = podcastPlayer.currentPosition()
++                val duration = podcastPlayer.duration()
+ 
+                 val newPosition = (current + delta)
+                     .coerceAtMost(duration)
+ 
+-                player.seekTo(newPosition)
++                podcastPlayer.seekTo(newPosition)
+ 
+                 delay(150)
+             }
+@@ -474,8 +498,8 @@ class MenuViewModel(
+ 
+         if (scanJob != null) return
+ 
+-        wasPlayingBeforeScan = player.isPlaying()
+-        player.pause()
++        wasPlayingBeforeScan = podcastPlayer.isPlaying()
++        podcastPlayer.pause()
+ 
+         scanJob = viewModelScope.launch {
+             val startTime = System.currentTimeMillis()
+@@ -484,12 +508,12 @@ class MenuViewModel(
+                 val elapsedMs = System.currentTimeMillis() - startTime
+                 val delta = computeScanDelta(elapsedMs)
+ 
+-                val current = player.currentPosition()
++                val current = podcastPlayer.currentPosition()
+ 
+                 val newPosition = (current - delta)
+                     .coerceAtLeast(0)
+ 
+-                player.seekTo(newPosition)
++                podcastPlayer.seekTo(newPosition)
+ 
+                 delay(150)
+             }
+@@ -501,7 +525,7 @@ class MenuViewModel(
+         scanJob = null
+ 
+         if (wasPlayingBeforeScan) {
+-            player.play()
++            podcastPlayer.play()
+         }
+     }
+ 
+@@ -525,7 +549,7 @@ class MenuViewModel(
+         overridePodcastVolumeLevel = newVolumePercent
+ 
+         // apply immediately
+-        player.setVolume(Volume.percentToFloat(newVolumePercent))
++        podcastPlayer.setVolume(Volume.percentToFloat(newVolumePercent))
+     }
+ 
+     //------------------------------
+@@ -533,8 +557,8 @@ class MenuViewModel(
+     //------------------------------
+     fun onPlayPauseShortPressed() {
+         if (_activeSlot.value != null) {
+-            if (player.isPlaying()) player.pause()
+-            else player.play()
++            if (podcastPlayer.isPlaying()) podcastPlayer.pause()
++            else podcastPlayer.play()
+         } else if (_menuState.value is MenuState.NowPlaying){
+             //If we stopped the track in NowPlaying, we should be able to start again
+             val current = _menuState.value as MenuState.NowPlaying
+@@ -545,7 +569,7 @@ class MenuViewModel(
+ 
+     fun stopPlaybackCompletely() {
+         if (_activeSlot.value != null) {
+-            player.stop()
++            podcastPlayer.stop()
+             _activeSlot.value = null
+         }
+ 
+@@ -729,17 +753,17 @@ class MenuViewModel(
+ 
+                 val path = storage.getFilePath(slot.fileName)
+ 
+-                player.load(AudioSource(path))
++                podcastPlayer.load(AudioSource(path))
+ 
+                 val now = playbackClock.now()
+-                player.setStartedAt(now)
++                podcastPlayer.setStartedAt(now)
+ 
+-                player.play()
++                podcastPlayer.play()
+ 
+                 overridePodcastVolumeLevel = context.audioSettings.defaultPodcastVolume
+                 val volume = Volume.percentToFloat(context.audioSettings.defaultPodcastVolume)
+ 
+-                player.setVolume(volume)
++                podcastPlayer.setVolume(volume)
+ 
+                 _activeSlot.value = slot
+             }
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/DefaultSfxDownloader.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/DefaultSfxDownloader.kt
+index f83d6c4..88cf085 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/DefaultSfxDownloader.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/DefaultSfxDownloader.kt
+@@ -11,11 +11,12 @@ class DefaultSfxDownloader(
+ 
+     override suspend fun download(
+         index: Int,
++        fileName: String,
+         url: String
+     ): File {
+ 
+-        val fileName = "sfx_feed_$index.mp3"
+-        val file = storage.createFile(fileName)
++        val sanitizedFileName = sanitizeFileName(fileName)
++        val file = storage.createFile(sanitizedFileName)
+ 
+         return fileDownloader.download(
+             url = url,
+@@ -23,4 +24,10 @@ class DefaultSfxDownloader(
+             onProgress = {}
+         )
+     }
++}
++
++private fun sanitizeFileName(name: String): String {
++    return name
++        .replace("[^A-Za-z0-9._-]".toRegex(), "_")
++        .take(100)
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/SfxDownloader.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/SfxDownloader.kt
+index 670dc57..54f3bf9 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/SfxDownloader.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/download/SfxDownloader.kt
+@@ -3,5 +3,5 @@ package com.github.clabersmith.sleepplayer.features.sfx.data.download
+ import java.io.File
+ 
+ interface SfxDownloader {
+-    suspend fun download(index: Int, url: String): File
++    suspend fun download(index: Int, fileName: String, url: String): File
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlot.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlot.kt
+index 264bacc..179ce9d 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlot.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlot.kt
+@@ -5,5 +5,6 @@ import kotlinx.serialization.Serializable
+ @Serializable
+ data class PersistedSfxSlot(
+     val index: Int,
++    val fileName: String = "",
+     val lastDownloadedAt: Long? = null
+ )
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlotRepository.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlotRepository.kt
+index 10b4490..34d3ddf 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlotRepository.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/PersistedSfxSlotRepository.kt
+@@ -40,17 +40,25 @@ class PersistedSfxSlotRepository(
+         dataStore.edit { it[KEY] = encoded }
+     }
+ 
+-    override suspend fun updateSlot(index: Int, timestamp: Long) {
++    override suspend fun updateSlot(index: Int, fileName: String, timestamp: Long) {
+         val slots = loadSlots().toMutableList()
+         val i = slots.indexOfFirst { it.index == index }
+ 
+         if (i != -1) {
+-            slots[i] = slots[i].copy(lastDownloadedAt = timestamp)
++            slots[i] = slots[i].copy(
++                fileName = fileName,
++                lastDownloadedAt = timestamp
++            )
+         }
+-
+         saveSlots(slots)
+     }
+ 
+     private fun defaultSlots(): List<PersistedSfxSlot> =
+-        (1..4).map { PersistedSfxSlot(index = it) }
++        (1..4).map { index ->
++            PersistedSfxSlot(
++                index = index,
++                fileName = "",        // empty until downloaded
++                lastDownloadedAt = 0L
++            )
++        }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/SfxSlotRepository.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/SfxSlotRepository.kt
+index ae83a1b..8a72ffb 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/SfxSlotRepository.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/local/SfxSlotRepository.kt
+@@ -3,5 +3,5 @@ package com.github.clabersmith.sleepplayer.features.sfx.data.local
+ interface SfxSlotRepository {
+     suspend fun loadSlots(): List<PersistedSfxSlot>
+     suspend fun saveSlots(slots: List<PersistedSfxSlot>)
+-    suspend fun updateSlot(index: Int, timestamp: Long)
++    suspend fun updateSlot(index: Int, fileName: String, timestamp: Long)
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/repository/DefaultSfxRepository.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/repository/DefaultSfxRepository.kt
+index ee6daaa..27c001b 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/repository/DefaultSfxRepository.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/data/repository/DefaultSfxRepository.kt
+@@ -32,6 +32,7 @@ class DefaultSfxRepository(
+             val items = feed.items.mapIndexed { index, dto ->
+                 SfxItem(
+                     index = index,
++                    name = dto.name,
+                     url = dto.url,
+                     lastModified = parseTimestamp(dto.timestamp)
+                 )
+@@ -63,10 +64,10 @@ class DefaultSfxRepository(
+                     current = item.index
+                 )
+ 
+-                downloader.download(item.index, item.url)
++                downloader.download(item.index, item.name, item.url)
+ 
+                 val now = System.currentTimeMillis()
+-                slotRepo.updateSlot(item.index, now)
++                slotRepo.updateSlot(item.index, item.name, now)
+             }
+ 
+             _status.value = _status.value.copy(
+@@ -80,6 +81,12 @@ class DefaultSfxRepository(
+         }
+     }
+ 
++    override suspend fun getFileNameForIndex(index: Int): String? {
++        return slotRepo.loadSlots()
++            .find { it.index == index }
++            ?.fileName
++    }
++
+     // -----------------------------------
+     // Helpers
+     // -----------------------------------
+@@ -95,6 +102,7 @@ class DefaultSfxRepository(
+ 
+ data class SfxItem(
+     val index: Int,
++    val name: String,
+     val url: String,
+     val lastModified: Long
+ )
+\ No newline at end of file
+diff --git a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/domain/repository/SfxRepository.kt b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/domain/repository/SfxRepository.kt
+index 95d3228..5f3295d 100644
+--- a/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/domain/repository/SfxRepository.kt
++++ b/app/src/main/java/com/github/clabersmith/sleepplayer/features/sfx/domain/repository/SfxRepository.kt
+@@ -5,4 +5,5 @@ import kotlinx.coroutines.flow.StateFlow
+ interface SfxRepository {
+     val status: StateFlow<SfxDownloadStatus>
+     suspend fun startDownload()
++    suspend fun getFileNameForIndex(index: Int): String?
+ }
+\ No newline at end of file
+diff --git a/app/src/test/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModelTest.kt b/app/src/test/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModelTest.kt
+index fcc8654..9c6d4f1 100644
+--- a/app/src/test/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModelTest.kt
++++ b/app/src/test/java/com/github/clabersmith/sleepplayer/core/ui/skin/ipod/viewmodel/MenuViewModelTest.kt
+@@ -718,7 +718,7 @@ class MenuViewModelTest() {
+         sfxRepository = fakeSfxRepository,
+         downloader = downloader,
+         storage = fakeFileStorage,
+-        player = fakePodcastPlayer,
++        podcastPlayer = fakePodcastPlayer,
+         whiteNoisePlayer = fakeWhiteNoisePlayer,
+         playbackClock = fakePlaybackClock
+     )

@@ -10,7 +10,7 @@ fun SfxMenu(
 ) {
     val items = listOf(
         MenuItem("Download", showChevron = true),
-        MenuItem("Play", showChevron = true) // placeholder
+        MenuItem("Play", showChevron = true)
     )
 
     MenuList(

@@ -40,17 +40,25 @@ class PersistedSfxSlotRepository(
         dataStore.edit { it[KEY] = encoded }
     }
 
-    override suspend fun updateSlot(index: Int, timestamp: Long) {
+    override suspend fun updateSlot(index: Int, fileName: String, timestamp: Long) {
         val slots = loadSlots().toMutableList()
         val i = slots.indexOfFirst { it.index == index }
 
         if (i != -1) {
-            slots[i] = slots[i].copy(lastDownloadedAt = timestamp)
+            slots[i] = slots[i].copy(
+                fileName = fileName,
+                lastDownloadedAt = timestamp
+            )
         }
-
         saveSlots(slots)
     }
 
     private fun defaultSlots(): List<PersistedSfxSlot> =
-        (1..4).map { PersistedSfxSlot(index = it) }
+        (0..3).map { index ->
+            PersistedSfxSlot(
+                index = index,
+                fileName = "",        // empty until downloaded
+                lastDownloadedAt = 0L
+            )
+        }
 }

@@ -7,8 +7,8 @@ class FakeSfxDownloader : SfxDownloader {
 
     val downloaded = mutableListOf<Int>()
 
-    override suspend fun download(index: Int, url: String): File {
+    override suspend fun download(index: Int, fileName: String, url: String): File {
         downloaded.add(index)
-        return File("sfx_feed_$index.mp3")
+        return File(fileName)
     }
 }

@@ -7,9 +7,11 @@ import com.github.clabersmith.sleepplayer.core.data.datastore.slotDataStore
 import com.github.clabersmith.sleepplayer.core.data.download.FileDownloader
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlaybackClock
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
-import com.github.clabersmith.sleepplayer.core.playback.ExoAudioPlayer
+import com.github.clabersmith.sleepplayer.core.playback.ExoPodcastPlayer
+import com.github.clabersmith.sleepplayer.core.playback.ExoSfxPlayer
 import com.github.clabersmith.sleepplayer.core.playback.ExoWhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.playback.PlaybackClock
+import com.github.clabersmith.sleepplayer.core.playback.SfxPlayer
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.features.podcasts.data.download.DefaultPodcastDownloader
 import com.github.clabersmith.sleepplayer.features.podcasts.data.local.AudioFileStorage
@@ -78,9 +80,11 @@ class AppContainer(context: Context) {
     // -----------------------------
     val playbackClock: PlaybackClock = AudioPlaybackClock(appScope)
 
-    val audioPlayer: AudioPlayer = ExoAudioPlayer(context, playbackClock)
+    val podcastPlayer: AudioPlayer = ExoPodcastPlayer(context, playbackClock)
 
     val whiteNoisePlayer: WhiteNoisePlayer = ExoWhiteNoisePlayer(context)
+
+    val sfxPlayer: SfxPlayer = ExoSfxPlayer(context)
 
 
 }

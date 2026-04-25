@@ -2,6 +2,7 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model
 
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoiseTrack
 import com.github.clabersmith.sleepplayer.features.podcasts.domain.model.PodcastFeed
+import com.github.clabersmith.sleepplayer.features.sfx.data.local.PersistedSfxSlot
 import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxDownloadStatus
 import kotlinx.serialization.Serializable
 
@@ -14,7 +15,10 @@ data class MenuContext(
     val currentWhiteNoiseTrack: WhiteNoiseTrack? = null,
     val displaySettings: DisplaySettings = DisplaySettings(),
     val audioSettings: AudioSettings = AudioSettings(),
-    val sfxStatus: SfxDownloadStatus = SfxDownloadStatus()
+    val sfxDownloadStatus: SfxDownloadStatus = SfxDownloadStatus(),
+    val sfxSlots: List<PersistedSfxSlot> = emptyList(),
+    val activeSfxIndex: Int? = null, //0 based
+    val sfxLastUpdatedAt: Long? = null
 )
 
 @Serializable

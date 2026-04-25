@@ -15,9 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Instant.now
 
-class ExoAudioPlayer(
+class ExoPodcastPlayer(
     context: Context,
     private val playbackClock: PlaybackClock
 ) : AudioPlayer {

@@ -1,5 +1,6 @@
 package com.github.clabersmith.sleepplayer.testutil.domain.repository
 
+import com.github.clabersmith.sleepplayer.features.sfx.data.local.PersistedSfxSlot
 import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxDownloadStatus
 import com.github.clabersmith.sleepplayer.features.sfx.domain.repository.SfxRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,19 +14,64 @@ class FakeSfxRepository : SfxRepository {
     var startDownloadCalled = false
 
     /**
+     * In-memory slots used for tests
+     */
+    private var slots: MutableList<PersistedSfxSlot> =
+        (0 until 4).map { index ->
+            PersistedSfxSlot(
+                index = index,
+                fileName = "",
+                lastDownloadedAt = 0L
+            )
+        }.toMutableList()
+
+    /**
      * Optional scripted behavior when startDownload() is invoked.
-     * Tests can override this.
      */
     var onStartDownload: (suspend () -> Unit)? = null
 
     override suspend fun startDownload() {
         startDownloadCalled = true
-
         onStartDownload?.invoke()
     }
 
+    override suspend fun getSlots(): List<PersistedSfxSlot> {
+        return slots
+    }
+
+    override suspend fun getFileNameForIndex(index: Int): String? {
+        return slots
+            .find { it.index == index }
+            ?.fileName
+            ?.takeIf { it.isNotBlank() }
+    }
+
     // -----------------------------------
-    // Test Helpers (this is the real value)
+    // Test helpers for slots
+    // -----------------------------------
+
+    fun setSlots(newSlots: List<PersistedSfxSlot>) {
+        slots = newSlots.toMutableList()
+    }
+
+    fun setFileName(index: Int, fileName: String) {
+        val i = slots.indexOfFirst { it.index == index }
+        if (i != -1) {
+            slots[i] = slots[i].copy(
+                fileName = fileName,
+                lastDownloadedAt = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun clearSlots() {
+        slots = slots.map {
+            it.copy(fileName = "", lastDownloadedAt = 0L)
+        }.toMutableList()
+    }
+
+    // -----------------------------------
+    // Status emit helpers
     // -----------------------------------
 
     fun emitIdle() {

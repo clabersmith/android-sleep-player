@@ -19,18 +19,36 @@ import com.github.clabersmith.sleepplayer.core.util.formatTimestamp
 fun SfxDownloadMenu(
     state: MenuState.SfxDownload
 ) {
+    val context = state.context
     val status = state.status
 
-    val textLines = buildList {
-        add(
-            status.lastFullUpdateAt?.let {
-                "Last update: ${formatTimestamp(it)}"
-            } ?: "No downloads yet"
-        )
+    val lastUpdated = context.sfxLastUpdatedAt
+    val hasDownloads = lastUpdated != null
 
-        if (status.message.isNotBlank()) {
-            add("")
-            add(status.message)
+    val textLines = buildList {
+
+        when {
+            status.isDownloading -> {
+                add(status.message)
+            }
+
+            status.message.isNotBlank() -> {
+                // Show feedback AFTER pressing Download
+                add(status.message)
+
+                if (hasDownloads) {
+                    add("")
+                    add("Last update: ${formatTimestamp(lastUpdated!!)}")
+                }
+            }
+
+            hasDownloads -> {
+                add("Last update: ${formatTimestamp(lastUpdated!!)}")
+            }
+
+            else -> {
+                add("No downloads yet")
+            }
         }
     }
 
