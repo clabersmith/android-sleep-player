@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.github.clabersmith.sleepplayer.core.playback.SfxSnapshot
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.AudioSettingsMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.CategoryMenu
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.menu.DisplaySettingsMenu
@@ -51,6 +52,7 @@ fun LcdScreen(
     menuState: MenuState,
     nowPlayingUiState: NowPlayingUiState,
     whiteNoiseUiState: WhiteNoiseUiState,
+    sfxUIState: SfxSnapshot,
     navDirection: NavDirection,
     modifier: Modifier = Modifier
 ) {
@@ -84,7 +86,8 @@ fun LcdScreen(
                 Header(
                     menuState,
                     nowPlayingUiState,
-                    whiteNoiseUiState
+                    whiteNoiseUiState,
+                    sfxUIState
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

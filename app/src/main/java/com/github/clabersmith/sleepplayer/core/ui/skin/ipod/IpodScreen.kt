@@ -29,6 +29,7 @@ fun IpodScreen(
     val menuState by viewModel.menuState.collectAsState()
     val nowPlayingUiState by viewModel.nowPlayingUiState.collectAsState()
     val whiteNoiseUiState by viewModel.whiteNoiseUiState.collectAsState()
+    val sfxUIState by viewModel.sfxUiState.collectAsState()
     val navDirection by viewModel.navDirection.collectAsState()
 
     // resolve full theme
@@ -78,6 +79,7 @@ fun IpodScreen(
             menuState = menuState,
             nowPlayingUiState = nowPlayingUiState,
             whiteNoiseUiState = whiteNoiseUiState,
+            sfxUIState = sfxUIState,
             navDirection = navDirection
         )
 

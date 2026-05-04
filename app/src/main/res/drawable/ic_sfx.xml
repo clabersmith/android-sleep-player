@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="26"
+    android:viewportHeight="26">
+
+    <!-- Left bar (shifted left slightly) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4.4,7
+                          a1.4,1.4 0 0 1 1.4,-1.4
+                          h1.7
+                          a1.4,1.4 0 0 1 1.4,1.4
+                          v10
+                          a1.4,1.4 0 0 1 -1.4,1.4
+                          h-1.7
+                          a1.4,1.4 0 0 1 -1.4,-1.4
+                          z"/>
+
+    <!-- Middle bar -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.2,4
+                          a1.4,1.4 0 0 1 1.4,-1.4
+                          h1.7
+                          a1.4,1.4 0 0 1 1.4,1.4
+                          v16
+                          a1.4,1.4 0 0 1 -1.4,1.4
+                          h-1.7
+                          a1.4,1.4 0 0 1 -1.4,-1.4
+                          z"/>
+
+    <!-- Right bar -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M15.6,7
+                          a1.4,1.4 0 0 1 1.4,-1.4
+                          h1.7
+                          a1.4,1.4 0 0 1 1.4,1.4
+                          v10
+                          a1.4,1.4 0 0 1 -1.4,1.4
+                          h-1.7
+                          a1.4,1.4 0 0 1 -1.4,-1.4
+                          z"/>
+</vector>

@@ -24,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.clabersmith.sleepplayer.R
+import com.github.clabersmith.sleepplayer.core.playback.SfxSnapshot
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuState
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodMenuText
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.theme.IpodTextPrimary
@@ -34,7 +35,8 @@ import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel.WhiteNoise
 fun Header(
     menuState: MenuState,
     nowPlayingUiState: NowPlayingUiState,
-    whiteNoiseUiState: WhiteNoiseUiState
+    whiteNoiseUiState: WhiteNoiseUiState,
+    sfxUiState: SfxSnapshot
 ) {
 
     Column {
@@ -70,6 +72,15 @@ fun Header(
                     )
 
                     Spacer(modifier = Modifier.width(4.dp)) // spacing AFTER white noise icon
+                }
+
+                if (sfxUiState.isPlaying) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_sfx),
+                        contentDescription = "White noise active",
+                        modifier = Modifier.size(20.dp).padding(end = 1.dp),
+                        tint = IpodTextPrimary
+                    )
                 }
             }
 
