@@ -22,6 +22,10 @@ fun AudioSettingsMenu(
         MenuItem(
             title = "Noise Volume",
             volume = settings.defaultWhiteNoiseVolume
+        ),
+        MenuItem(
+            title = "FX Volume", // ADD
+            volume = settings.defaultSfxVolume
         )
     )
 

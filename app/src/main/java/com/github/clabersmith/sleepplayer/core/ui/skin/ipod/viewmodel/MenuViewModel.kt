@@ -359,6 +359,7 @@ class MenuViewModel(
         updateDisplayTheme = { theme -> updateDisplayTheme(theme) },
         updateAudioSettings = { transform -> updateAudioSettings(transform) },
         getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume },
+        getSfxBaseVolume = { context.audioSettings.defaultSfxVolume },
         stopPodcastPlayback = { stopPlaybackCompletely() }
     )
 

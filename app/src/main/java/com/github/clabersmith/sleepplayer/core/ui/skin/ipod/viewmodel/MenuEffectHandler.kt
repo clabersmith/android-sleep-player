@@ -2,6 +2,7 @@ package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.SfxPlayer
+import com.github.clabersmith.sleepplayer.core.playback.Volume
 import com.github.clabersmith.sleepplayer.core.playback.WhiteNoisePlayer
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.AudioSettings
 import com.github.clabersmith.sleepplayer.core.ui.skin.ipod.model.MenuEffect
@@ -56,6 +57,7 @@ class MenuEffectHandler(
     private val updateDisplayTheme: (MenuState.DisplaySettings.Theme) -> Unit,
     private val updateAudioSettings: ( (AudioSettings) -> AudioSettings) -> Unit,
     private val getWhiteNoiseBaseVolume: () -> Int,
+    private val getSfxBaseVolume: () -> Int,
     private val stopPodcastPlayback: () -> Unit
 ) {
     private var repeatJob: Job? = null
@@ -194,10 +196,12 @@ class MenuEffectHandler(
 
                     val fileName = sfxRepository.getFileNameForIndex(index)
                     if (fileName.isNullOrBlank()) return@launch
-
                     val filePath = storage.getFilePath(fileName)
 
+                    val baseVolPercent = getSfxBaseVolume()
+                    val baseVol = (baseVolPercent / 100f).coerceIn(0f, 1f)
                     sfxPlayer.play(filePath, index)
+                    sfxPlayer.setVolume(baseVol)
                 }
             }
 

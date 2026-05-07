@@ -11,7 +11,6 @@ fun SfxPlayMenu(state: MenuState.SfxPlay) {
     val context = state.context
 
     val items = context.sfxSlots.map { slot ->
-        Log.d("SfxPlayMenu", "Slot ${slot.index}: ${slot.fileName}")
         MenuItem(
             title = slot.fileName.ifBlank { "Empty Slot" },
             isChecked = slot.index == context.activeSfxIndex

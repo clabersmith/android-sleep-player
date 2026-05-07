@@ -22,7 +22,7 @@ fun HomeMenu(
     )
 
     items.add(
-        MenuItem("SFX", showChevron = true)
+        MenuItem("FX", showChevron = true)
     )
 
     items.add(

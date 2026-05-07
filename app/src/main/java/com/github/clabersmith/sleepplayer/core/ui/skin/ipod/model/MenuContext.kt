@@ -37,5 +37,6 @@ data class DisplaySettings(
 data class AudioSettings(
     val clickEnabled: Boolean = true,
     val defaultPodcastVolume: Int = 100,     // 0–100
-    val defaultWhiteNoiseVolume: Int = 100   // 0–100
+    val defaultWhiteNoiseVolume: Int = 100,   // 0–100
+    val defaultSfxVolume: Int = 50          // 0-100, default 50
 )

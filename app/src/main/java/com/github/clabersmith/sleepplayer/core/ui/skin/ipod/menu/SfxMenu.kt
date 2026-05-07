@@ -33,8 +33,8 @@ fun SfxMenu(
     )
 
     val description = when (state.selectedIndex) {
-        0 -> "SFX files are updated nightly. Choose download to get the current ones."
-        1 -> "SFX files are playable with white noise. Select a white noise option first."
+        0 -> "FX files are updated nightly. Choose download to get the current ones."
+        1 -> "FX files are playable with white noise. Select a white noise option first."
         else -> ""
     }
 

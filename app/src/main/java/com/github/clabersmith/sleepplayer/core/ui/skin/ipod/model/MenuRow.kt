@@ -39,9 +39,6 @@ fun MenuRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (selected) IpodMenuHighlight else Color.Transparent
-            )
-            .background(
                 if (selected && !item.isDisabled) IpodMenuHighlight else Color.Transparent
             )
             .padding(vertical = 4.dp),

@@ -892,6 +892,7 @@ sealed class MenuState() {
             AudioItem.ClickSound,
             AudioItem.PodcastVolume,
             AudioItem.WhiteNoiseVolume,
+            AudioItem.SfxVolume
         )
 
         override val itemCount = items.size
@@ -949,6 +950,24 @@ sealed class MenuState() {
                             )
                         )
 
+                        AudioItem.SfxVolume -> MenuTransition(
+                            newState = this,
+                            effects = listOf(
+                                MenuEffect.UpdateAudioSettings {
+                                    it.copy(
+                                        defaultSfxVolume = adjust(it.defaultSfxVolume, +1)
+                                    )
+                                },
+                                MenuEffect.StartRepeatingEffect(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(
+                                            defaultSfxVolume = adjust(it.defaultSfxVolume, +1)
+                                        )
+                                    }
+                                )
+                            )
+                        )
+
                         else -> MenuTransition(this)
                     }
                 }
@@ -989,6 +1008,24 @@ sealed class MenuState() {
                                     MenuEffect.UpdateAudioSettings {
                                         it.copy(
                                             defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, -1)
+                                        )
+                                    }
+                                )
+                            )
+                        )
+
+                        AudioItem.SfxVolume -> MenuTransition(
+                            newState = this,
+                            effects = listOf(
+                                MenuEffect.UpdateAudioSettings {
+                                    it.copy(
+                                        defaultSfxVolume = adjust(it.defaultSfxVolume, -1)
+                                    )
+                                },
+                                MenuEffect.StartRepeatingEffect(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(
+                                            defaultSfxVolume = adjust(it.defaultSfxVolume, -1)
                                         )
                                     }
                                 )
@@ -1050,6 +1087,7 @@ sealed class MenuState() {
             object ClickSound : AudioItem()
             object PodcastVolume : AudioItem()
             object WhiteNoiseVolume : AudioItem()
+            object SfxVolume : AudioItem()
         }
 
         private fun adjust(
@@ -1064,7 +1102,7 @@ sealed class MenuState() {
     ) : MenuState() {
 
         override val itemCount = 2
-        override val title = "SFX"
+        override val title = "FX"
 
         override fun copyWithIndex(newIndex: Int) = copy(selectedIndex = newIndex)
 
