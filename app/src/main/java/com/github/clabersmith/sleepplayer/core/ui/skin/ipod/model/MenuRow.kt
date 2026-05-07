@@ -29,11 +29,20 @@ fun MenuRow(
     item: MenuItem,
     selected: Boolean
 ) {
+    val textColor = when {
+        item.isDisabled -> IpodTextPrimary.copy(alpha = 0.3f)
+        selected -> Color.White
+        else -> IpodTextPrimary.copy(alpha = 0.85f)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 if (selected) IpodMenuHighlight else Color.Transparent
+            )
+            .background(
+                if (selected && !item.isDisabled) IpodMenuHighlight else Color.Transparent
             )
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -45,11 +54,11 @@ fun MenuRow(
             overflow = TextOverflow.Clip,
             style = IpodMenuText,
             fontSize = 18.sp,
-            color = if (selected) Color.White else IpodTextPrimary.copy(alpha = 0.85f),
+            color = textColor,
             modifier = Modifier
                 .weight(1f)
                 .then(
-                    if (selected)
+                    if (selected && !item.isDisabled)
                         Modifier.basicMarquee(
                             iterations = Int.MAX_VALUE,
                             initialDelayMillis = 850,

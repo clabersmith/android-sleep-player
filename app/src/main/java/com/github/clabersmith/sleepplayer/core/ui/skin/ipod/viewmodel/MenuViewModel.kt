@@ -208,6 +208,7 @@ class MenuViewModel(
         observeSfxDownloadStatus()
         observeSfxPlayStatus()
         observeSfxSlots()
+        observeWhiteNoiseStopsSfx()
     }
 
     // Initial load of feeds, categories and persisted download slots
@@ -312,6 +313,20 @@ class MenuViewModel(
                     it.copy(activeSfxIndex = sfx.currentIndex)
                 }
             }
+        }
+    }
+
+    private fun observeWhiteNoiseStopsSfx() {
+        viewModelScope.launch {
+            whiteNoiseUiState
+                .map { it.isPlaying }
+                .distinctUntilChanged()
+                .collect { isPlaying ->
+
+                    if (!isPlaying && sfxPlayer.isPlaying()) {
+                        sfxPlayer.stop()
+                    }
+                }
         }
     }
 

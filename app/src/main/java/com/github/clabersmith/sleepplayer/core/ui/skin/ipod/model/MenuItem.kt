@@ -5,5 +5,6 @@ data class MenuItem(
     val value: String? = null,
     val showChevron: Boolean = false,
     val isChecked: Boolean = false,
+    val isDisabled: Boolean = false,
     val volume: Int? = null
 )

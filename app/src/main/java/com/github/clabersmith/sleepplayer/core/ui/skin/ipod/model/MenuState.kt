@@ -1075,21 +1075,33 @@ sealed class MenuState() {
 
             return when (event) {
 
-                MenuEvent.Confirm -> when (selectedIndex) {
-                    0 -> MenuTransition(
-                        newState = SfxDownload(
-                            context = context,
-                            status = context.sfxDownloadStatus
-                        ),
-                        direction = NavDirection.Forward
-                    )
+                MenuEvent.Confirm -> {
 
-                    1 -> MenuTransition(
-                        newState = SfxPlay(context),
-                        direction = NavDirection.Forward
-                    )
+                    val isWhiteNoiseActive = context.currentWhiteNoiseTrack != null
 
-                    else -> MenuTransition(this)
+                    when (selectedIndex) {
+                        0 -> MenuTransition(
+                            newState = SfxDownload(
+                                context = context,
+                                status = context.sfxDownloadStatus
+                            ),
+                            direction = NavDirection.Forward
+                        )
+
+                        1 -> {
+                            if (!isWhiteNoiseActive) {
+                                // Block navigation if white noise is not active
+                                return MenuTransition(this)
+                            }
+
+                            MenuTransition(
+                                newState = SfxPlay(context),
+                                direction = NavDirection.Forward
+                            )
+                        }
+
+                        else -> MenuTransition(this)
+                    }
                 }
 
                 MenuEvent.MenuShortPress -> MenuTransition(
