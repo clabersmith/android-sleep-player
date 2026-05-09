@@ -58,7 +58,10 @@ class MenuEffectHandler(
     private val updateAudioSettings: ( (AudioSettings) -> AudioSettings) -> Unit,
     private val getWhiteNoiseBaseVolume: () -> Int,
     private val getSfxBaseVolume: () -> Int,
-    private val stopPodcastPlayback: () -> Unit
+    private val stopPodcastPlayback: () -> Unit,
+    private val updatePodcastVolume: (Float) -> Unit,
+    private val updateWhiteNoiseVolume: (Float) -> Unit,
+    private val updateSfxVolume: (Float) -> Unit
 ) {
     private var repeatJob: Job? = null
 
@@ -141,32 +144,25 @@ class MenuEffectHandler(
                 updateAudioSettings(effect.transform)
             }
 
-            is MenuEffect.StartRepeatingEffect -> {
-                repeatJob?.cancel()
+            is MenuEffect.UpdatePodcastVolume -> {
+                val volume = (effect.volumePercent / 100f)
+                    .coerceIn(0f, 1f)
 
-                repeatJob = scope.launch {
+                updatePodcastVolume(volume)
+            }
 
-                    val startTime = System.currentTimeMillis()
+            is MenuEffect.UpdateWhiteNoiseVolume -> {
+                val volume = (effect.volumePercent / 100f)
+                    .coerceIn(0f, 1f)
 
-                    delay(240) // initial "hold" threshold (prevents accidental repeats)
+                updateWhiteNoiseVolume(volume)
+            }
 
-                    while (isActive) {
-                        val elapsed = System.currentTimeMillis() - startTime
+            is MenuEffect.UpdateSfxVolume -> {
+                val volume = (effect.volumePercent / 100f)
+                    .coerceIn(0f, 1f)
 
-                        val (stepMultiplier, delayMs) = when {
-                            elapsed < 500 -> 1 to 140L   // very short hold → slow, precise
-                            elapsed < 1500 -> 1 to 80L   // still precise, slightly faster
-                            elapsed < 3000 -> 2 to 60L   // medium hold → faster
-                            else -> 3 to 40L             // long hold → fast ramp
-                        }
-
-                        repeat(stepMultiplier) {
-                            handle(effect.effect)
-                        }
-
-                        delay(delayMs)
-                    }
-                }
+                updateSfxVolume(volume)
             }
 
             is MenuEffect.StopRepeatingEffect -> {

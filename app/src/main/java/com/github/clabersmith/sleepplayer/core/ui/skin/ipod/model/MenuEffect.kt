@@ -59,6 +59,18 @@ sealed interface MenuEffect {
         val transform: (AudioSettings) -> AudioSettings
     ) : MenuEffect
 
+    data class UpdatePodcastVolume(
+        val volumePercent: Int
+    ) : MenuEffect
+
+    data class UpdateWhiteNoiseVolume(
+        val volumePercent: Int
+    ) : MenuEffect
+
+    data class UpdateSfxVolume(
+        val volumePercent: Int
+    ) : MenuEffect
+
 
     // -----------------------------
     // Scan effects
@@ -66,7 +78,6 @@ sealed interface MenuEffect {
     object StartScanForward : MenuEffect
     object StartScanBack : MenuEffect
     object StopScan : MenuEffect
-    data class StartRepeatingEffect(val effect: MenuEffect) : MenuEffect
     object StopRepeatingEffect : MenuEffect
 
     // -----------------------------

@@ -722,14 +722,7 @@ sealed class MenuState() {
                             // Immediate single step (tap)
                             MenuEffect.UpdatePlaybackSettings { current ->
                                 adjustSetting(current, +1)
-                            },
-
-                            // Hold for continuous adjustment
-                            MenuEffect.StartRepeatingEffect(
-                                MenuEffect.UpdatePlaybackSettings { current ->
-                                    adjustSetting(current, +1)
-                                }
-                            )
+                            }
                         )
                     )
                 }
@@ -744,13 +737,7 @@ sealed class MenuState() {
                             // Immediate single step (tap)
                             MenuEffect.UpdatePlaybackSettings { current ->
                                 adjustSetting(current, -1)
-                            },
-
-                            MenuEffect.StartRepeatingEffect(
-                                MenuEffect.UpdatePlaybackSettings { current ->
-                                    adjustSetting(current, -1)
-                                }
-                            )
+                            }
                         )
                     )
                 }
@@ -914,59 +901,63 @@ sealed class MenuState() {
                 MenuEvent.ScanForwardDown -> {
                     return when (items[selectedIndex]) {
 
-                        AudioItem.PodcastVolume -> MenuTransition(
-                            newState = this,
-                            effects = listOf(
-                                MenuEffect.UpdateAudioSettings {
-                                    it.copy(
-                                        defaultPodcastVolume = adjust(it.defaultPodcastVolume, +1)
-                                    )
-                                },
-                                MenuEffect.StartRepeatingEffect(
-                                    MenuEffect.UpdateAudioSettings {
-                                        it.copy(
-                                            defaultPodcastVolume = adjust(it.defaultPodcastVolume, +1)
-                                        )
-                                    }
-                                )
-                            )
-                        )
+                        AudioItem.PodcastVolume -> {
 
-                        AudioItem.WhiteNoiseVolume -> MenuTransition(
-                            newState = this,
-                            effects = listOf(
-                                MenuEffect.UpdateAudioSettings {
-                                    it.copy(
-                                        defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, +1)
-                                    )
-                                },
-                                MenuEffect.StartRepeatingEffect(
-                                    MenuEffect.UpdateAudioSettings {
-                                        it.copy(
-                                            defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, +1)
-                                        )
-                                    }
-                                )
+                            val newVolume = adjust(
+                                context.audioSettings.defaultPodcastVolume,
+                                +1
                             )
-                        )
 
-                        AudioItem.SfxVolume -> MenuTransition(
-                            newState = this,
-                            effects = listOf(
-                                MenuEffect.UpdateAudioSettings {
-                                    it.copy(
-                                        defaultSfxVolume = adjust(it.defaultSfxVolume, +1)
-                                    )
-                                },
-                                MenuEffect.StartRepeatingEffect(
+                            MenuTransition(
+                                newState = this,
+                                effects = listOf(
                                     MenuEffect.UpdateAudioSettings {
-                                        it.copy(
-                                            defaultSfxVolume = adjust(it.defaultSfxVolume, +1)
-                                        )
-                                    }
+                                        it.copy(defaultPodcastVolume = newVolume)
+                                    },
+
+                                    MenuEffect.UpdatePodcastVolume(newVolume)
                                 )
                             )
-                        )
+                        }
+
+                        AudioItem.WhiteNoiseVolume -> {
+
+                            val newVolume = adjust(
+                                context.audioSettings.defaultWhiteNoiseVolume,
+                                +1
+                            )
+
+                            MenuTransition(
+                                newState = this,
+                                effects = listOf(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(defaultWhiteNoiseVolume = newVolume)
+                                    },
+
+                                    MenuEffect.UpdateWhiteNoiseVolume(newVolume)
+                                )
+                            )
+                        }
+
+                        AudioItem.SfxVolume -> {
+
+                            val newVolume = adjust(
+                                context.audioSettings.defaultSfxVolume,
+                                +1
+                            )
+
+                            MenuTransition(
+                                newState = this,
+                                effects = listOf(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(defaultSfxVolume = newVolume)
+                                    },
+
+                                    MenuEffect.UpdateSfxVolume(newVolume),
+
+                                )
+                            )
+                        }
 
                         else -> MenuTransition(this)
                     }
@@ -978,59 +969,62 @@ sealed class MenuState() {
                 MenuEvent.ScanBackDown -> {
                     return when (items[selectedIndex]) {
 
-                        AudioItem.PodcastVolume -> MenuTransition(
-                            newState = this,
-                            effects = listOf(
-                                MenuEffect.UpdateAudioSettings {
-                                    it.copy(
-                                        defaultPodcastVolume = adjust(it.defaultPodcastVolume, -1)
-                                    )
-                                },
-                                MenuEffect.StartRepeatingEffect(
-                                    MenuEffect.UpdateAudioSettings {
-                                        it.copy(
-                                            defaultPodcastVolume = adjust(it.defaultPodcastVolume, -1)
-                                        )
-                                    }
-                                )
-                            )
-                        )
+                        AudioItem.PodcastVolume -> {
 
-                        AudioItem.WhiteNoiseVolume -> MenuTransition(
-                            newState = this,
-                            effects = listOf(
-                                MenuEffect.UpdateAudioSettings {
-                                    it.copy(
-                                        defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, -1)
-                                    )
-                                },
-                                MenuEffect.StartRepeatingEffect(
-                                    MenuEffect.UpdateAudioSettings {
-                                        it.copy(
-                                            defaultWhiteNoiseVolume = adjust(it.defaultWhiteNoiseVolume, -1)
-                                        )
-                                    }
-                                )
+                            val newVolume = adjust(
+                                context.audioSettings.defaultPodcastVolume,
+                                -1
                             )
-                        )
 
-                        AudioItem.SfxVolume -> MenuTransition(
-                            newState = this,
-                            effects = listOf(
-                                MenuEffect.UpdateAudioSettings {
-                                    it.copy(
-                                        defaultSfxVolume = adjust(it.defaultSfxVolume, -1)
-                                    )
-                                },
-                                MenuEffect.StartRepeatingEffect(
+                            MenuTransition(
+                                newState = this,
+                                effects = listOf(
                                     MenuEffect.UpdateAudioSettings {
-                                        it.copy(
-                                            defaultSfxVolume = adjust(it.defaultSfxVolume, -1)
-                                        )
-                                    }
+                                        it.copy(defaultPodcastVolume = newVolume)
+                                    },
+
+                                    MenuEffect.UpdatePodcastVolume(newVolume)
                                 )
                             )
-                        )
+                        }
+
+                        AudioItem.WhiteNoiseVolume -> {
+
+                            val newVolume = adjust(
+                                context.audioSettings.defaultWhiteNoiseVolume,
+                                -1
+                            )
+
+                            MenuTransition(
+                                newState = this,
+                                effects = listOf(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(defaultWhiteNoiseVolume = newVolume)
+                                    },
+
+                                    MenuEffect.UpdateWhiteNoiseVolume(newVolume)
+                                )
+                            )
+                        }
+
+                        AudioItem.SfxVolume -> {
+
+                            val newVolume = adjust(
+                                context.audioSettings.defaultSfxVolume,
+                                -1
+                            )
+
+                            MenuTransition(
+                                newState = this,
+                                effects = listOf(
+                                    MenuEffect.UpdateAudioSettings {
+                                        it.copy(defaultSfxVolume = newVolume)
+                                    },
+
+                                    MenuEffect.UpdateSfxVolume(newVolume)
+                                )
+                            )
+                        }
 
                         else -> MenuTransition(this)
                     }

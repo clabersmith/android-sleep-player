@@ -360,7 +360,10 @@ class MenuViewModel(
         updateAudioSettings = { transform -> updateAudioSettings(transform) },
         getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume },
         getSfxBaseVolume = { context.audioSettings.defaultSfxVolume },
-        stopPodcastPlayback = { stopPlaybackCompletely() }
+        stopPodcastPlayback = { stopPlaybackCompletely() },
+        updatePodcastVolume = { volume -> podcastPlayer.setVolume(volume) },
+        updateWhiteNoiseVolume = { volume -> whiteNoisePlayer.setVolume(volume) },
+        updateSfxVolume = { volume -> sfxPlayer.setVolume(volume) }
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
