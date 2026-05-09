@@ -96,8 +96,7 @@ class FakeSfxRepository : SfxRepository {
     fun emitComplete(timestamp: Long = System.currentTimeMillis()) {
         _status.value = SfxDownloadStatus(
             isDownloading = false,
-            message = "Download complete",
-            lastFullUpdateAt = timestamp
+            message = "Download complete"
         )
     }
 

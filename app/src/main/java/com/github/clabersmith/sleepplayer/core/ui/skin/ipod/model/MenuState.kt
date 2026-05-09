@@ -22,11 +22,9 @@ sealed class MenuState() {
 
     protected fun handleCommonEvents(event: MenuEvent): MenuTransition? {
         return when (event) {
-            MenuEvent.ScanForwardDown -> MenuTransition(this, effects = listOf(MenuEffect.StartScanForward))
-            MenuEvent.ScanForwardUp   -> MenuTransition(this, effects = listOf(MenuEffect.StopScan))
-            MenuEvent.ScanBackDown    -> MenuTransition(this, effects = listOf(MenuEffect.StartScanBack))
-            MenuEvent.ScanBackUp      -> MenuTransition(this, effects = listOf(MenuEffect.StopScan))
-            MenuEvent.MenuLongPress   -> MenuTransition(Home(context))
+            MenuEvent.MenuLongPress   -> MenuTransition(
+                Home(context))
+
             else -> null
         }
     }
@@ -545,6 +543,25 @@ sealed class MenuState() {
 
             return when (event) {
 
+                MenuEvent.ScanForwardDown ->
+                    MenuTransition(
+                        newState = this,
+                        effects = listOf(MenuEffect.StartScanForward)
+                    )
+
+                MenuEvent.ScanForwardUp,
+                MenuEvent.ScanBackUp ->
+                    MenuTransition(
+                        newState = this,
+                        effects = listOf(MenuEffect.StopScan)
+                    )
+
+                MenuEvent.ScanBackDown ->
+                    MenuTransition(
+                        newState = this,
+                        effects = listOf(MenuEffect.StartScanBack)
+                    )
+
                 MenuEvent.MenuShortPress ->
 
                     when (origin) {
@@ -555,13 +572,13 @@ sealed class MenuState() {
                         Origin.HOME -> MenuTransition(
                             Home(context, selectedIndex = 1)
                         )
-
-                        else -> MenuTransition(this)
                     }
 
-                MenuEvent.PlaybackStopped -> MenuTransition(Home(context)) // redirect to Home
+                MenuEvent.PlaybackStopped ->
+                    MenuTransition(Home(context))
 
-                else -> MenuTransition(this)
+                else ->
+                    MenuTransition(this)
             }
         }
 
