@@ -61,7 +61,8 @@ class MenuEffectHandler(
     private val stopPodcastPlayback: () -> Unit,
     private val updatePodcastVolume: (Float) -> Unit,
     private val updateWhiteNoiseVolume: (Float) -> Unit,
-    private val updateSfxVolume: (Float) -> Unit
+    private val updateSfxVolume: (Float) -> Unit,
+    private val refreshSfxSlots: () -> Unit
 ) {
     private var repeatJob: Job? = null
 
@@ -173,6 +174,7 @@ class MenuEffectHandler(
             is MenuEffect.StartSfxDownload -> {
                 scope.launch {
                     sfxRepository.startDownload()
+                    refreshSfxSlots()
                 }
             }
 

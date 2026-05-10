@@ -207,7 +207,6 @@ class MenuViewModel(
         observePlaybackCompletion()
         observeSfxDownloadStatus()
         observeSfxPlayStatus()
-        observeSfxSlots()
         observeWhiteNoiseStopsSfx()
     }
 
@@ -278,30 +277,19 @@ class MenuViewModel(
 
     private fun observeSfxSlots() {
         viewModelScope.launch {
-            var lastEmitted: Pair<List<PersistedSfxSlot>, Long?>? = null
 
-            while (isActive) {
+            val slots = sfxRepository.getSlots()
 
-                val slots = sfxRepository.getSlots()
+            val lastUpdated = slots
+                .mapNotNull { it.lastDownloadedAt }
+                .filter { it > 0 }
+                .maxOrNull()
 
-                val lastUpdated = slots
-                    .maxOfOrNull { it.lastDownloadedAt ?: 0L }
-                    ?.takeIf { it > 0 }
-
-                val current = slots to lastUpdated
-
-                // Only update if something actually changed
-                if (current != lastEmitted) {
-                    updateContext {
-                        it.copy(
-                            sfxSlots = slots,
-                            sfxLastUpdatedAt = lastUpdated
-                        )
-                    }
-                    lastEmitted = current
-                }
-
-                delay(1_000)
+            updateContext { current ->
+                current.copy(
+                    sfxSlots = slots,
+                    sfxLastUpdatedAt = lastUpdated
+                )
             }
         }
     }
@@ -360,10 +348,11 @@ class MenuViewModel(
         updateAudioSettings = { transform -> updateAudioSettings(transform) },
         getWhiteNoiseBaseVolume = { context.audioSettings.defaultWhiteNoiseVolume },
         getSfxBaseVolume = { context.audioSettings.defaultSfxVolume },
-        stopPodcastPlayback = { stopPlaybackCompletely() },
+        stopPodcastPlayback = ::stopPlaybackCompletely,
         updatePodcastVolume = { volume -> podcastPlayer.setVolume(volume) },
         updateWhiteNoiseVolume = { volume -> whiteNoisePlayer.setVolume(volume) },
-        updateSfxVolume = { volume -> sfxPlayer.setVolume(volume) }
+        updateSfxVolume = { volume -> sfxPlayer.setVolume(volume) },
+        refreshSfxSlots = ::observeSfxSlots
     )
 
     // Dispatches a [MenuEvent] to the current state, processes the resulting state transition,
