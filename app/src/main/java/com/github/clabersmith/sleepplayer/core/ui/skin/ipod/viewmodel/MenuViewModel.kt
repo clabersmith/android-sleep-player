@@ -1,5 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.lang.System.out
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.exp
 
@@ -217,12 +219,14 @@ class MenuViewModel(
             val categories = podcastRepository.getCategories().distinct().sorted()
             val restoredSlots = restoreSlots(feeds)
             val restoredSettings = settingsRepository.loadSettings()
+            val sfxSlots = sfxRepository.getSlots()
 
             updateContext {
                 it.copy(
                     feeds = feeds,
                     categories = categories,
                     slots = restoredSlots,
+                    sfxSlots = sfxSlots,
                     playbackSettings = restoredSettings?.playbackSettings ?: PlaybackSettings(),
                     displaySettings = restoredSettings?.displaySettings ?: DisplaySettings(),
                     audioSettings = restoredSettings?.audioSettings ?: AudioSettings()
@@ -330,6 +334,7 @@ class MenuViewModel(
         scope = viewModelScope,
         podcastPlayer = podcastPlayer,
         whiteNoisePlayer = whiteNoisePlayer,
+        audioDuckingCoordinator,
         sfxPlayer = sfxPlayer,
         storage = storage,
         sfxRepository = sfxRepository,

@@ -107,7 +107,6 @@ class DefaultSfxRepository(
                 .toInstant()
                 .toEpochMilli()
         }.getOrElse {
-            println("Failed to parse timestamp: $timestamp")
             0L
         }
     }

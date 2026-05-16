@@ -9,10 +9,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class AudioDuckingCoordinator(
     nowPlayingUiState: StateFlow<NowPlayingUiState>,
@@ -69,7 +71,12 @@ class AudioDuckingCoordinator(
             nowPlayingUiState
                 .map { it.isPlaying && it.slot != null }
                 .distinctUntilChanged()
+                .drop(1) // ignore initial state emission
                 .collect { isPlaying ->
+                    if (!whiteNoisePlayer.isPlaying()) {
+                        return@collect
+                    }
+
                     if (isPlaying) {
                         duckWhiteNoise()
                     } else {
@@ -93,6 +100,12 @@ class AudioDuckingCoordinator(
 
     private fun fadeTo(targetVolume: Float, durationMs: Long = 15000L, useEasing: Boolean = false) {
         fadeJob?.cancel()
+
+        val start = whiteNoisePlayer.getVolume()
+
+        if (abs(start - targetVolume) < 0.001f) {
+            return
+        }
 
         fadeJob = scope.launch {
             val start = whiteNoisePlayer.getVolume()
@@ -123,6 +136,16 @@ class AudioDuckingCoordinator(
 
     fun lerp(start: Float, end: Float, t: Float): Float {
         return start + (end - start) * t
+    }
+
+    fun syncWhiteNoiseWithPodcastPlayback() {
+        val shouldDuck = player.isPlaying()
+
+        if (shouldDuck) {
+            duckWhiteNoise()
+        } else {
+            unduckWhiteNoise()
+        }
     }
 
     // ----- Podcast and White Noise Auto Fade on Timer Management -----

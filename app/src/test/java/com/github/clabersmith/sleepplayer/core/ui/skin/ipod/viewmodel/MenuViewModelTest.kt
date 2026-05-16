@@ -30,6 +30,8 @@ import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisod
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToEpisodeDetailDownloaded
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToFeedsMenu
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToNowPlaying
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToSfxMenu
+import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToSfxPlay
 import com.github.clabersmith.sleepplayer.testutil.helpers.ipod.navigateToWhiteNoise
 import com.github.clabersmith.sleepplayer.testutil.playback.FakePlaybackClock
 import com.github.clabersmith.sleepplayer.testutil.playback.FakeSfxPlayer
@@ -712,6 +714,226 @@ class MenuViewModelTest() {
         assertTrue( fakePodcastPlayer.volumeHistory.none { it < 1.0f })
     }
 
+    @Test
+    fun `playing sfx starts sfx player`() = runTest {
+        val viewModel = createNewViewModel()
+
+        advanceUntilIdle()
+
+        // Start white noise first (required for SFX menu)
+        navigateToWhiteNoise(viewModel)
+        click(viewModel)
+
+        assertTrue(fakeWhiteNoisePlayer.playCalled)
+
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        //Start SFX playback
+        navigateToSfxPlay(viewModel)
+        click(viewModel)
+
+        assertTrue(fakeSfxPlayer.playCalled)
+    }
+
+    @Test
+    fun `playing second sfx replaces previous`() = runTest {
+        val viewModel = createNewViewModel()
+
+        advanceUntilIdle()
+
+        navigateToWhiteNoise(viewModel)
+        click(viewModel)
+        advanceUntilIdle()
+
+
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        navigateToSfxPlay(viewModel)
+
+        click(viewModel) // first
+        advanceUntilIdle()
+
+        viewModel.moveSelection(1)
+
+        click(viewModel) // second
+        advanceUntilIdle()
+
+        assertEquals(1, fakeSfxPlayer.getCurrentIndex())
+    }
+
+    @Test
+    fun `selecting active sfx stops playback`() = runTest {
+        val viewModel = createNewViewModel()
+
+        advanceUntilIdle()
+
+        navigateToWhiteNoise(viewModel)
+        click(viewModel)
+
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        navigateToSfxPlay(viewModel)
+
+        click(viewModel)
+        advanceUntilIdle()
+
+        click(viewModel) // same index again
+
+        assertTrue(fakeSfxPlayer.stopCalled)
+    }
+
+    @Test
+    fun `playing sfx stops podcast playback`() = runTest {
+        val viewModel = createNewViewModel()
+
+        persistFakeSlot()
+        advanceUntilIdle()
+
+        //start playback of podcast
+        navigateToNowPlaying(viewModel)
+        advanceUntilIdle()
+
+        //go to home
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        //start playback of white noise
+        navigateToWhiteNoise(viewModel)
+        click(viewModel)
+        advanceUntilIdle()
+
+        //go to home
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        //go to sfx and play
+        navigateToSfxPlay(viewModel)
+        click(viewModel)
+        advanceUntilIdle()
+
+        assertTrue(fakePodcastPlayer.stopCalled)
+    }
+
+    @Test
+    fun `cannot enter sfx play without white noise active`() = runTest {
+        val viewModel = createNewViewModel()
+
+        advanceUntilIdle()
+
+        navigateToSfxMenu(viewModel)
+
+        viewModel.moveSelection(1)
+
+        click(viewModel)
+
+        assertTrue(viewModel.menuState.value is MenuState.Sfx)
+    }
+
+    @Test
+    fun `changing sfx volume updates settings`() = runTest {
+        val viewModel = createNewViewModel()
+
+        advanceUntilIdle()
+
+        navigateToAudioSettings(viewModel)
+
+        viewModel.moveSelection(3)
+
+        repeat(60) {
+            viewModel.onScanForwardDown()
+            viewModel.onScanForwardUp()
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(
+            100,
+            viewModel.menuState.value.context
+                .audioSettings.defaultSfxVolume
+        )
+    }
+
+    @Test
+    fun `changing white noise volume updates active playback`() = runTest {
+        fakePersistedSettingsRepository.saveSettings(
+            PersistedSettings(
+                playbackSettings = PlaybackSettings(),
+                displaySettings = DisplaySettings(),
+                audioSettings = AudioSettings(
+                    defaultWhiteNoiseVolume = 50
+                )
+            )
+        )
+
+        val viewModel = createNewViewModel()
+        advanceUntilIdle()
+
+        navigateToWhiteNoise(viewModel)
+        click(viewModel)
+        advanceUntilIdle()
+
+        //go to home
+        viewModel.onMenuLongPress()
+        advanceUntilIdle()
+
+        navigateToAudioSettings(viewModel)
+
+        viewModel.moveSelection(2)
+        viewModel.onScanForwardDown()
+        viewModel.onScanForwardUp()
+        advanceUntilIdle()
+
+        assertTrue(fakeWhiteNoisePlayer.setVolumeCalled)
+        assertEquals(0.51f, fakeWhiteNoisePlayer.volumeSet)
+    }
+
+        @Test
+        fun `changing sfx volume updates active sfx playback`() = runTest {
+            fakePersistedSettingsRepository.saveSettings(
+                PersistedSettings(
+                    playbackSettings = PlaybackSettings(),
+                    displaySettings = DisplaySettings(),
+                    audioSettings = AudioSettings(
+                        defaultSfxVolume = 50
+                    )
+                )
+            )
+
+            val viewModel = createNewViewModel()
+            advanceUntilIdle()
+
+            //go to white noise from home and start it (required to enter sfx menu)
+            navigateToWhiteNoise(viewModel)
+            click(viewModel)
+            advanceUntilIdle()
+
+            //back to home
+            viewModel.onMenuLongPress()
+            advanceUntilIdle()
+
+            //got to sfx play and start it
+            navigateToSfxPlay(viewModel)
+            click(viewModel)
+            advanceUntilIdle()
+
+            //back to home
+            viewModel.onMenuLongPress()
+            advanceUntilIdle()
+
+            // got sfx audio settings and change sfx volume
+            navigateToAudioSettings(viewModel)
+            viewModel.moveSelection(3)
+            viewModel.onScanForwardDown()
+            viewModel.onScanForwardUp()
+            advanceUntilIdle()
+
+            assertTrue(fakeSfxPlayer.setVolumeCalled)
+
+            assertTrue(fakeSfxPlayer.volumeSet > 0.5f)
+        }
     private suspend fun createNewViewModel(
         downloader: PodcastDownloader = fakeDownloaderSuccess
     ): MenuViewModel = MenuViewModel(

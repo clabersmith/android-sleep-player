@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 class FakeSfxPlayer : SfxPlayer {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    var playCalled = false
+    var stopCalled = false
+    var setVolumeCalled = false
 
     private var isPlayingInternal = false
     private var currentIndexInternal: Int? = null
@@ -25,6 +28,8 @@ class FakeSfxPlayer : SfxPlayer {
         // Same behavior as real player: avoid restarting same item
         if (currentIndexInternal == index && isPlayingInternal) return
 
+        playCalled = true
+
         currentFilePath = filePath
         currentIndexInternal = index
         isPlayingInternal = true
@@ -36,6 +41,7 @@ class FakeSfxPlayer : SfxPlayer {
         isPlayingInternal = false
         currentIndexInternal = null
         currentFilePath = null
+        stopCalled = true
 
         emitSnapshot()
     }
@@ -47,6 +53,7 @@ class FakeSfxPlayer : SfxPlayer {
     }
 
     override fun setVolume(volume: Float) {
+        setVolumeCalled = true
         volumeSet = volume
     }
 
@@ -58,6 +65,8 @@ class FakeSfxPlayer : SfxPlayer {
     // -----------------------------------
     // Test helpers (VERY useful)
     // -----------------------------------
+
+    fun getCurrentIndex(): Int? = currentIndexInternal
 
     /**
      * Simulate playback finishing naturally

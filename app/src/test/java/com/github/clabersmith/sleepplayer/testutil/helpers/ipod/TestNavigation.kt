@@ -80,6 +80,30 @@ fun TestScope.navigateToWhiteNoise(
     click(viewModel)
 }
 
+fun TestScope.navigateToSfxMenu(
+    viewModel: MenuViewModel
+) {
+    //Home, select SFX
+    viewModel.moveSelection(2)
+
+    //Home -> SFX
+    click(viewModel)
+}
+
+
+fun TestScope.navigateToSfxPlay(
+    viewModel: MenuViewModel
+) {
+    navigateToSfxMenu(viewModel)
+
+    //SFX, select Play
+    viewModel.moveSelection(1)
+
+    //SFX -> Play
+    click(viewModel)
+}
+
+
 fun TestScope.navigateToSettings(
     viewModel: MenuViewModel
 ) {

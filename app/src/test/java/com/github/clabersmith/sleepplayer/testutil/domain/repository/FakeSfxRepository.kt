@@ -19,9 +19,9 @@ class FakeSfxRepository : SfxRepository {
     private var slots: MutableList<PersistedSfxSlot> =
         (0 until 4).map { index ->
             PersistedSfxSlot(
-                index = index,
-                fileName = "",
-                lastDownloadedAt = 0L
+            index = index,
+            fileName = "sfx_${index + 1}.mp3",
+            lastDownloadedAt = 1234L
             )
         }.toMutableList()
 

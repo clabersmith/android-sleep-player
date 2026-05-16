@@ -1,5 +1,6 @@
 package com.github.clabersmith.sleepplayer.core.ui.skin.ipod.viewmodel
 
+import com.github.clabersmith.sleepplayer.core.playback.AudioDuckingCoordinator
 import com.github.clabersmith.sleepplayer.core.playback.AudioPlayer
 import com.github.clabersmith.sleepplayer.core.playback.SfxPlayer
 import com.github.clabersmith.sleepplayer.core.playback.Volume
@@ -42,6 +43,7 @@ class MenuEffectHandler(
     private val scope: CoroutineScope,
     private val podcastPlayer: AudioPlayer,
     private val whiteNoisePlayer: WhiteNoisePlayer,
+    private val audioDuckingCoordinator: AudioDuckingCoordinator,
     private val sfxPlayer: SfxPlayer,
     private val sfxRepository: SfxRepository,
     private val storage: FileStorage,
@@ -98,6 +100,8 @@ class MenuEffectHandler(
                 val baseVol = (baseVolPercent / 100f).coerceIn(0f, 1f)
                 whiteNoisePlayer.play(effect.track)
                 whiteNoisePlayer.setVolume(baseVol)
+
+                audioDuckingCoordinator.syncWhiteNoiseWithPodcastPlayback()
             }
 
             is MenuEffect.StopWhiteNoise -> {
